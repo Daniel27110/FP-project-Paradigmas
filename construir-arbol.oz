@@ -1,17 +1,18 @@
 declare
 
 
-    %% /////////////////////////////////////////////////////////////////////////////
+    % /////////////////////////////////////////////////////////////////////////////
     %  DEFINITION OF THE INSTRUCTIION TREE CLASS
-    %% /////////////////////////////////////////////////////////////////////////////
+    % /////////////////////////////////////////////////////////////////////////////
 
-    class Tree
+    class TreeClass
 
-        % 1. leaf nodes: representing constants (numbers) or variables
-        % 2. @ nodes: representing function applications
+        % The tree is a binary tree with the following structure:
+        % 1. Left nodes: Operators
+        % 2. Right nodes: Parameters
 
         % Attributes
-        attr value left right
+        attr value left right 
 
         % Constructor
         meth init(Value)
@@ -42,49 +43,185 @@ declare
             @right
         end
 
-
     end
 
-    %% /////////////////////////////////////////////////////////////////////////////
+    % /////////////////////////////////////////////////////////////////////////////
+    % DEFINITION OF THE PARSER OBJECT - OUR KNOWLEDGE BASE FOR THE PARSER
+    % /////////////////////////////////////////////////////////////////////////////
+
+    class ParserClass
+
+        % Attributes
+        attr parameters parameterList
+
+        % Constructor
+        meth init()
+            parameters := parameters()
+            parameterList := nil
+        end
+
+        % Parameters
+        % Parameters represents a separate structure that will be used to store the VALUES of the parameters in a record
+        % This structure represents the memory of the program
+
+        meth addParameter(Param ParamValue)
+            @parameters := {Record.adjoin @parameters parameter(Param:ParamValue)}
+            (ParserClass,addParameterToParameterList(Param))
+        end
+
+        meth getParameterValue(Name $)
+            {Value.'.' @parameters Name}
+        end
+
+        meth getAllParameters($)
+            @parameterList
+        end
+
+        meth addParameterToParameterList(Param)
+            if @parameterList == nil then
+                parameterList := [Param]
+            else  
+                parameterList := {List.append @parameterList Param}
+            end
+        end
+    end
+
+    % /////////////////////////////////////////////////////////////////////////////
     %  DEFINITION OF THE PARSER FUNCTIONS
-    %% /////////////////////////////////////////////////////////////////////////////
+    % /////////////////////////////////////////////////////////////////////////////
 
     fun {ParseCode Words}
         
         % Helper function to build the tree
-        fun {BuildTree Words Tree}
-            {Browse ['Constructing tree named [' {{Tree getLeft(($))} getValue($)} '] with instructions' Words ]}
+        fun {BuildTree FunctionName Instructions TreeStruc Parser}
+            {Browse ['Constructing tree named [' FunctionName '] with instructions' Instructions 'and parameters' {Parser getAllParameters($)}]}
 
-            % Iterate over the words list
-            1
-            % if the 
+            % Put instructions in prefix form
+            {Browse ['  1st. Put instructions in prefix form:' {StringListToAtomList {Infix2Prefix {AtomListToStringList Instructions}}}]}
             
-            % Check if the first word is a variable
+            local PrefixInstructions BuildTreeAux in
+
+                PrefixInstructions = {StringListToAtomList {Infix2Prefix {AtomListToStringList Instructions}}}
+
+                {Browse ['  2nd. Add operations to the left node and parameters to the right node']}
+
+                % Iterate over the instructions, if its an instruction, add it to the left node,
+                % if it's a parameter, add it to the right node
+
+                % Tree construction algorithm:
+                    % Find the position with the next operator
+                    % Get the operator
+                    % Get the parameters
+                    % Add the operator to the left node if there is only one parameter
+                    % if there are more than one parameter, create a new tree with the operator and the single parameter
+
+                fun {BuildTreeAux PrefixInstructions TreeStruc Parser}
+                    case PrefixInstructions of H|T then
+                        if {List.member H ['+' '-' '*' '/']} then
+                            % If it's an operator, add it to the left node
+                            {TreeStruc setLeft(H)}
+                        else
+                            % If it's a parameter, add it to the right node
+                            {TreeStruc setRight(H)}
+                        end
+                        {BuildTreeAux T TreeStruc Parser}
+                    else
+                        TreeStruc
+                    end
+                end
+
+                % Call the recursive function
+                {BuildTreeAux PrefixInstructions TreeStruc Parser}
+
+            end
+                
+
+                
+    
 
         end
 
     in
         
-        local TreeStruc FunName in
+        local TreeStruc FunctionName Parser in
+
+            % Create a new parser
+            Parser = {New ParserClass init()}
+
             % The first word is allways 'fun', we can ignore it
 
             % The second word is the function name, that will be the leaf node
-            % Remember the structure:
-                % root node: @
-                % left node: function name
-                % right node: function body
-            FunName = {List.nth Words 2}
-
-            TreeStruc =  {New Tree init('@')}
-            {TreeStruc setLeft({New Tree init(FunName)})}
+            FunctionName = {List.nth Words 2}
+            TreeStruc =  {New TreeClass init('@')}
 
 
-            % The third word is allways '=', we can ignore it
-            % From the fourth word onwards, we can start building the tree
-            {BuildTree {List.drop Words 4} TreeStruc}
+            % The third word onwards MAY be parameters, otherwise its an '='
+            % If it's an '=', we can ignore it
+            if {List.nth Words 3} == '=' then
+                {BuildTree FunctionName {List.drop Words 3} TreeStruc Parser}
+            else
+                % If it's not an '=', it's a parameter, we add them recursively to the list
+
+                for Param in {Parameters Words 2} do
+                    {Parser addParameter(Param _)}
+                end
+
+                {BuildTree FunctionName {List.drop Words 4} TreeStruc Parser}
+
+            end
+
 
         end
         
+    end
+
+    % /////////////////////////////////////////////////////////////////////////////
+    % DEFINITION OF THE FUNCTION TO RECURSIVELY GET THE POSITION OF A CHARACTER IN A LIST
+    % I CAN'T BELIEVE THIS FUNCTION DOESN'T EXIST IN OZ
+    % /////////////////////////////////////////////////////////////////////////////
+
+    fun {Index List Element}
+        % {Browse ['  Index' List Element]}
+        case List of H|T then
+            if H == Element then
+                1
+            else
+                1 + {Index T Element}
+            end
+        [] nil then
+            nil
+        end
+    end
+        
+
+    % /////////////////////////////////////////////////////////////////////////////
+    %  DEFINITION OF THE PARAMETERS FUNCTION - GETS THE PARAMETERS OF A FUNCTION
+    % /////////////////////////////////////////////////////////////////////////////
+
+    fun {Parameters Words OpPos}
+        % GET THE PARAMETERS OF THE OPERATION AT THE POSITION OpPos
+        % ITS PARAMETERS ARE ALL WORDS AFTER OPPOS AND BEFORE THE NEXT OPERATOR
+        % ALL OPERATORS ARE: +, -, *, /, =, (, )
+    
+        fun {ParametersAux Words Parameters}
+            case Words of H|T then
+                % {Browse ['  ParametersAux' Words Parameters]}
+                if {List.member H ['+' '-' '*' '/' '=' '(' ')']} then
+                    Parameters
+                else
+                    if Parameters == nil then
+                        {ParametersAux T [H]}
+                    else
+                        {ParametersAux T {List.append Parameters [H]}}
+                    end
+                end
+            else
+                Parameters
+            end
+        end
+    
+    in
+        {ParametersAux {List.drop Words OpPos} nil}
     end
 
     % /////////////////////////////////////////////////////////////////////////////
@@ -328,15 +465,5 @@ local Code Call Words Tree in
     Tree = {ParseCode Words}
     {Browse Tree}
 
-
     % /////////////////////////////////////////////////////////////////////////////
-    
-    % TEST THE list of atoms to string function
-    {Browse {AtomListToStringList ['(' 'x' '*' 'y' ')']}}
-
-    % TEST THE PREORDER FUNCTION
-    {Browse {Infix2Prefix {AtomListToStringList ['(' 'x' '*' 'y' ')']}}}
-
-    % TEST THE STRING TO ATOM LIST FUNCTION
-    {Browse {StringListToAtomList {Infix2Prefix {AtomListToStringList ['(' 'x' '*' 'y' ')']}}}}
 end
