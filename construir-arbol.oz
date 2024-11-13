@@ -1,6 +1,10 @@
 declare
 
-    % Class that represents a tree
+
+    %% /////////////////////////////////////////////////////////////////////////////
+    %  DEFINITION OF THE INSTRUCTIION TREE CLASS
+    %% /////////////////////////////////////////////////////////////////////////////
+
     class Tree
 
         % 1. leaf nodes: representing constants (numbers) or variables
@@ -41,7 +45,10 @@ declare
 
     end
 
-    % Function to parse the code string and build the tree
+    %% /////////////////////////////////////////////////////////////////////////////
+    %  DEFINITION OF THE PARSER FUNCTIONS
+    %% /////////////////////////////////////////////////////////////////////////////
+
     fun {ParseCode Words}
         
         % Helper function to build the tree
@@ -80,13 +87,21 @@ declare
         
     end
 
-    % Function to split the code string into words
+    % /////////////////////////////////////////////////////////////////////////////
+    %  DEFINITION OF THE SPLIT FUNCTION - SPLIT THE CODE INTO WORDS
+    % /////////////////////////////////////////////////////////////////////////////
+
     fun {Split Code}
         % iterate until finding a space
         fun {SplitAux Code Words Cumulative}
 
             case {AtomToString Code} of
-                nil then {List.append Words [Cumulative]}
+                nil then 
+                    if Cumulative == nil then
+                        {List.append Words nil}
+                    else
+                        {List.append Words [Cumulative]}
+                    end 
 
             [] 32|Rest then
                 % 32 represents the ASCII code for space
@@ -94,9 +109,38 @@ declare
                 % {Browse ['  Cumulative' Cumulative]}
 
                 % 1. add the cumulative to the words list
-                % 2. reset the cumulative
+                % 2. reset the cumulative 
                 % 3. call the function recursively with the rest of the code
                 {SplitAux {String.toAtom Rest} {List.append Words [Cumulative]} nil}
+
+            [] 40 | Rest then
+                % 40 represents the ASCII code for '('
+                % {Browse 'Found a parenthesis!'}
+                % {Browse ['  Cumulative' Cumulative]}
+
+                % 1. add the cumulative to the words list
+                % 2. reset the cumulative AND THE PARANTHESIS
+                % 3. call the function recursively with the rest of the code
+                if Cumulative == nil then
+                    {SplitAux {String.toAtom Rest} {List.append Words ['(']} nil}
+                else
+                    {SplitAux {String.toAtom Rest} {List.append {List.append Words [Cumulative]} ['(']} nil}
+                end
+
+            [] 41 | Rest then
+                % 41 represents the ASCII code for ')'
+                % {Browse 'Found a parenthesis!'}
+                % {Browse ['  Cumulative' Cumulative]}
+
+                % 1. add the cumulative to the words list
+                % 2. reset the cumulative AND THE PARANTHESIS
+                % 3. call the function recursively with the rest of the code
+                if Cumulative == nil then
+                    {SplitAux {String.toAtom Rest} {List.append Words [')']} nil}
+                else
+                    {SplitAux {String.toAtom Rest} {List.append {List.append Words [Cumulative]} [')']} nil}
+                end
+
             [] Char|Rest then
                 % check the character is read correctly
                 %{Browse ['code:' Code 'char:' {String.toAtom Char | nil} 'cumulative:' Cumulative]}
@@ -116,7 +160,10 @@ declare
         {SplitAux Code nil nil}
     end
 
-    % Concatenate two atoms into a single one
+    % /////////////////////////////////////////////////////////////////////////////
+    %  DEFINITION OF THE CONCATENATE FUNCTION - CONCATENATE TWO ATOMS
+    % /////////////////////////////////////////////////////////////////////////////
+
     fun {Concatenate Atom1 Atom2}
         % Check the concatenation is done correctly
         % {Browse ['  Concatenate' Atom1 '+' Atom2]}
@@ -127,19 +174,28 @@ declare
     end
 
 
-local Code Words Tree in
+local Code Call Words Tree in
 
-    % Example usage
-    Code = 'fun square x = x * x'
+    % /////////////////////////////////////////////////////////////////////////////
+    % TEST CASES
+    % EACH TEST CASE HAS A DEFINITION AND A CALL, AS DEFINED BY THE REQUIREMENTS
+    % /////////////////////////////////////////////////////////////////////////////
+
+    % /////////////////////////////////////////////////////////////////////////////
+    % TEST CASE 1
+    % DEFINITION: fun twice x = x + x
+    % CALL: twice 5
+    % /////////////////////////////////////////////////////////////////////////////
+
+    Code = 'fun square x = (x * x)'
+    Call = 'square 5'
+    {Browse ['FIRST TEST CASE']}
     {Browse ['Code:' Code]}
-    
+    {Browse ['Call:' Call]}
+
     {Browse '---'}
 
     Words = {Split Code}
-    {Browse ['Split Code:' Words]}
-
-    {Browse '---'}
-
     Tree = {ParseCode Words}
     {Browse Tree}
 end
