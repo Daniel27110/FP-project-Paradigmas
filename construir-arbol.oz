@@ -43,6 +43,58 @@ declare
             @right
         end
 
+        % Inorder traversal
+        meth inorder(List $)
+
+            % List is allways a cell
+            (TreeClass,inorderHelper(List @left @right))
+            {Cell.access List}
+
+        end
+
+        meth inorderHelper(ListCell Left Right)
+
+            % left
+            if Left \= nil then
+                % {Cell.assign ListCell {ListCell.append {Cell.access ListCell} {Left.inorder()}}}
+                if {Cell.access ListCell} == nil then
+                    {Cell.assign ListCell {Left inorder(ListCell $)}}
+                else
+                    {Cell.assign ListCell {List.append {Cell.access ListCell} {Left inorder({Cell.new nil} $)}}}
+                end
+            end
+
+            % root
+            if {Cell.access ListCell} == nil then
+
+                {Cell.assign ListCell [@value]}
+                %{Browse {Cell.access ListCell}}
+            else
+                {Cell.assign ListCell {List.append {Cell.access ListCell} [@value]}}
+
+            end
+
+            % right
+            if Right \= nil then
+                % {Cell.assign ListCell {ListCell.append {Cell.access ListCell} {Right.inorder()}}}
+                if {Cell.access ListCell} == nil then
+                    {Cell.assign ListCell {Right inorder(ListCell $)}}
+                else
+                    {Cell.assign ListCell {List.append {Cell.access ListCell} {Right inorder({Cell.new nil} $)}}}
+                end
+            end
+
+
+        end
+
+
+        % Print tree in inorder traversal
+        meth treeStructure($)
+
+            (TreeClass,inorder({Cell.new nil} $))
+
+        end
+
     end
 
     % /////////////////////////////////////////////////////////////////////////////
@@ -90,10 +142,11 @@ declare
     %  DEFINITION OF THE PARSER FUNCTIONS
     % /////////////////////////////////////////////////////////////////////////////
 
-    fun {ParseCode Words}
+    proc {ParseCode Words}
         
         % Helper function to build the tree
-        fun {BuildTree FunctionName Instructions TreeStruc Parser}
+        proc {BuildTree FunctionName Instructions TreeStruc Parser}
+
             {Browse ['Constructing tree named [' FunctionName '] with instructions' Instructions 'and parameters' {Parser getAllParameters($)}]}
 
             % Put instructions in prefix form
@@ -115,27 +168,40 @@ declare
                     % Add the operator to the left node if there is only one parameter
                     % if there are more than one parameter, create a new tree with the operator and the single parameter
 
-                fun {BuildTreeAux PrefixInstructions TreeStruc Parser}
+                % (Realmente es perfectamente posible interpretar la expresión sin necesidad de crear un árbol, pero para efectos de la tarea, se creará un árbol)
+
+                proc {BuildTreeAux PrefixInstructions TreeStruc Parser OpPos}
                     case PrefixInstructions of H|T then
                         if {List.member H ['+' '-' '*' '/']} then
-                            % If it's an operator, add it to the left node
-                            {TreeStruc setLeft(H)}
-                        else
-                            % If it's a parameter, add it to the right node
-                            {TreeStruc setRight(H)}
+                            % If it's an operator, find its parameters
+                            local Op Pa in
+                                Op = H
+                                Pa = {Parameters PrefixInstructions OpPos}
+                                % {Browse ['  Operator' Op 'Parameters' Pa]}
+                                
+                                % Recursively add the operator to the left node and the parameters to the right node
+                                {AddOperator Op Pa TreeStruc}
+                                
+                                % move on to the next character
+                                {BuildTreeAux T TreeStruc Parser OpPos + 1}
+
+                            end
+                        
                         end
-                        {BuildTreeAux T TreeStruc Parser}
-                    else
-                        TreeStruc
+                    
                     end
                 end
 
                 % Call the recursive function
-                {BuildTreeAux PrefixInstructions TreeStruc Parser}
+                {BuildTreeAux PrefixInstructions TreeStruc Parser 1}
+
+
+                % print the tree in a nice visual way
+                % {TreeStruc printTree()}
 
             end
                 
-
+            {Browse ['  3rd. Done! The tree inorder structure is:' {TreeStruc treeStructure($)}]}
                 
     
 
@@ -166,13 +232,57 @@ declare
                     {Parser addParameter(Param _)}
                 end
 
-                {BuildTree FunctionName {List.drop Words 4} TreeStruc Parser}
+                {BuildTree FunctionName {List.drop Words {Index Words '='}} TreeStruc Parser}
+
+
 
             end
 
 
+
         end
         
+    end
+
+    % /////////////////////////////////////////////////////////////////////////////
+    % DEFINITION OF THE ADD OPERATOR FUNCTION - ADDS AN OPERATOR TO THE LEFT NODE AND PARAMETERS TO THE RIGHT NODE
+    % /////////////////////////////////////////////////////////////////////////////
+
+    proc {AddOperator Operator Parameters TreeStruc}
+        % {Browse ['  · Adding operator' Operator 'to the left node and parameters' Parameters 'to the right node']}
+        % Calculate the number of parameters, if there is only one, add the operator to the left node
+        % and the parameter to the right node
+        % if there is more than one, create a new tree, add the first parameter to the right node
+        % and call the function recursively with the rest of the parameters and the new tree
+        
+        if {List.length Parameters} == 1 then
+
+            {Browse ['  · Adding operator' Operator 'to the left node and parameter' {List.nth Parameters 1} 'to the right node']}
+            % Add the operator to the left node
+            {TreeStruc setLeft({New TreeClass init(Operator)})}
+            % Add the parameter to the right node
+            {TreeStruc setRight({New TreeClass init({List.nth Parameters 1})})}
+        else
+
+            {Browse ['  · Adding parameter ' {List.nth Parameters 1} 'to the right node as a parameter of operator' Operator]}
+            {Browse ['  · Creating a new tree to the left node for the other parameter of operator' Operator]}
+            % Create a new tree with the operator
+            local NewTree in
+
+                % Add the first parameter to the right of the tree
+                {TreeStruc setRight({New TreeClass init({List.nth Parameters 1})})}
+
+                % Create a new tree and set it to the left node
+                NewTree = {New TreeClass init('@')}
+                {TreeStruc setLeft(NewTree)}
+
+                % % Recursovely repeat the process over this new left tree
+                {AddOperator Operator {List.drop Parameters 1} NewTree}
+
+            end
+        end
+
+
     end
 
     % /////////////////////////////////////////////////////////////////////////////
@@ -440,7 +550,7 @@ declare
     end
 
 
-local Code Call Words Tree in
+local Code Call in
 
     % /////////////////////////////////////////////////////////////////////////////
     % TEST CASES
@@ -453,7 +563,7 @@ local Code Call Words Tree in
     % CALL: twice 5
     % /////////////////////////////////////////////////////////////////////////////
 
-    Code = 'fun square x = (x * x)'
+    Code = 'fun square x = x * x'
     Call = 'square 5'
     {Browse ['FIRST TEST CASE']}
     {Browse ['Code:' Code]}
@@ -461,9 +571,9 @@ local Code Call Words Tree in
 
     {Browse '---'}
 
-    Words = {Split Code}
-    Tree = {ParseCode Words}
-    {Browse Tree}
+    {ParseCode {Split Code}}
+    
+
 
     % /////////////////////////////////////////////////////////////////////////////
 end
