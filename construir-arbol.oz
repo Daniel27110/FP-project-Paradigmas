@@ -172,21 +172,21 @@ declare
 
                 proc {BuildTreeAux PrefixInstructions TreeStruc Parser OpPos}
                     case PrefixInstructions of H|T then
-                        if {List.member H ['+' '-' '*' '/']} then
-                            % If it's an operator, find its parameters
-                            local Op Pa in
-                                Op = H
-                                Pa = {Parameters PrefixInstructions OpPos}
-                                % {Browse ['  Operator' Op 'Parameters' Pa]}
-                                
-                                % Recursively add the operator to the left node and the parameters to the right node
-                                {AddOperator Op Pa TreeStruc}
-                                
-                                % move on to the next character
-                                {BuildTreeAux T TreeStruc Parser OpPos + 1}
-
-                            end
-                        
+                        local Op Pa in
+                            Op = H
+                            Pa = T
+                            {Browse ['  Operator' Op 'Parameters' Pa 'Instructions' PrefixInstructions]}
+                            
+                            % Recursively add the operator to the left node and the parameters to the right node
+                            {AddOperator Op Pa TreeStruc}
+                            
+                            % % move on to the next character
+                            % if Pa == ['@'] then
+                            %     {BuildTreeAux T TreeStruc Parser OpPos}
+                            % else
+                            %     {BuildTreeAux T TreeStruc Parser OpPos + 1}
+                            % end
+                    
                         end
                     
                     end
@@ -229,6 +229,7 @@ declare
                 % If it's not an '=', it's a parameter, we add them recursively to the list
 
                 for Param in {Parameters Words 2} do
+                    {Browse ['  · Adding parameter' Param]}
                     {Parser addParameter(Param _)}
                 end
 
@@ -248,36 +249,56 @@ declare
     % DEFINITION OF THE ADD OPERATOR FUNCTION - ADDS AN OPERATOR TO THE LEFT NODE AND PARAMETERS TO THE RIGHT NODE
     % /////////////////////////////////////////////////////////////////////////////
 
-    proc {AddOperator Operator Parameters TreeStruc}
+    proc {AddOperator Operator ParametersList TreeStruc}
         % {Browse ['  · Adding operator' Operator 'to the left node and parameters' Parameters 'to the right node']}
         % Calculate the number of parameters, if there is only one, add the operator to the left node
         % and the parameter to the right node
         % if there is more than one, create a new tree, add the first parameter to the right node
         % and call the function recursively with the rest of the parameters and the new tree
         
-        if {List.length Parameters} == 1 then
+        if {List.length ParametersList} == 1 then
 
-            {Browse ['  · Adding operator' Operator 'to the left node and parameter' {List.nth Parameters 1} 'to the right node']}
+            {Browse ['  · Adding operator' Operator 'to the left node and parameter' {List.nth ParametersList 1} 'to the right node']}
             % Add the operator to the left node
             {TreeStruc setLeft({New TreeClass init(Operator)})}
             % Add the parameter to the right node
-            {TreeStruc setRight({New TreeClass init({List.nth Parameters 1})})}
+            {TreeStruc setRight({New TreeClass init({List.nth ParametersList 1})})}
         else
+            if {List.member {List.nth ParametersList 1} ['+' '-' '*' '/' '=' '(' ')']} then
+                % OH LOOK ITS A NEW OPERATOR, ADD IT TO THE RIGHT NODE, ADD A '@' TO THE LEFT NODE AND CALL THE FUNCTION RECURSIVELY
+                % CONTINUING THE TREE OVER THE NEW RIGHT NODE
+                {Browse ['  · Adding operator' {List.nth ParametersList 1} 'to the right node as a parameter of operator' Operator]}
+                {Browse ['  · Creating a new tree to the left node for the other parameter of operator' Operator]}
+                % Create a new tree with the operator
+                local NewTree in
 
-            {Browse ['  · Adding parameter ' {List.nth Parameters 1} 'to the right node as a parameter of operator' Operator]}
-            {Browse ['  · Creating a new tree to the left node for the other parameter of operator' Operator]}
-            % Create a new tree with the operator
-            local NewTree in
+                    % Add the first parameter to the right of the tree
+                    {TreeStruc setRight({New TreeClass init({List.nth ParametersList 1})})}
 
-                % Add the first parameter to the right of the tree
-                {TreeStruc setRight({New TreeClass init({List.nth Parameters 1})})}
+                    % Create a new tree and set it to the left node
+                    NewTree = {New TreeClass init('@')}
+                    {TreeStruc setLeft(NewTree)}
 
-                % Create a new tree and set it to the left node
-                NewTree = {New TreeClass init('@')}
-                {TreeStruc setLeft(NewTree)}
+                    % % Recursovely repeat the process over this new left tree
+                    {AddOperator Operator {List.drop ParametersList 1} NewTree}
+                end
 
-                % % Recursovely repeat the process over this new left tree
-                {AddOperator Operator {List.drop Parameters 1} NewTree}
+            else
+                {Browse ['  · Adding parameter ' {List.nth ParametersList 1} 'to the right node as a parameter of operator' Operator]}
+                {Browse ['  · Creating a new tree to the left node for the other parameter of operator' Operator]}
+                % Create a new tree with the operator
+                local NewTree in
+
+                    % Add the first parameter to the right of the tree
+                    {TreeStruc setRight({New TreeClass init({List.nth ParametersList 1})})}
+
+                    % Create a new tree and set it to the left node
+                    NewTree = {New TreeClass init('@')}
+                    {TreeStruc setLeft(NewTree)}
+
+                    % % Recursovely repeat the process over this new left tree
+                    {AddOperator Operator {List.drop ParametersList 1} NewTree}
+                end
 
             end
         end
@@ -317,8 +338,11 @@ declare
             case Words of H|T then
                 % {Browse ['  ParametersAux' Words Parameters]}
                 if {List.member H ['+' '-' '*' '/' '=' '(' ')']} then
+                    % {Browse ['  FOUND AN OPERATOR' H]}
                     Parameters
+                    
                 else
+                    % {Browse ['  FOUND A PARAMETER' H]}
                     if Parameters == nil then
                         {ParametersAux T [H]}
                     else
@@ -331,6 +355,7 @@ declare
         end
     
     in
+        {Browse ['  FINDING PARAMETERS AMONG' {List.drop Words OpPos}]}
         {ParametersAux {List.drop Words OpPos} nil}
     end
 
@@ -563,8 +588,8 @@ local Code Call in
     % CALL: twice 5
     % /////////////////////////////////////////////////////////////////////////////
 
-    Code = 'fun square x = x * x'
-    Call = 'square 5'
+    Code = 'fun sum x = x + x * x'
+    Call = 'sum 5'
     {Browse ['FIRST TEST CASE']}
     {Browse ['Code:' Code]}
     {Browse ['Call:' Call]}
