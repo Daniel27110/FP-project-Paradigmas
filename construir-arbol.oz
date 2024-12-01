@@ -117,7 +117,8 @@ declare
         % This structure represents the memory of the program
 
         meth addParameter(Param ParamValue)
-            @parameters := {Record.adjoin @parameters parameter(Param:ParamValue)}
+            % {Browse ['  · Adding parameter' Param 'with value' ParamValue]}
+            parameters := {Record.adjoin @parameters parameter(Param:ParamValue)}
             (ParserClass,addParameterToParameterList(Param))
         end
 
@@ -133,7 +134,7 @@ declare
             if @parameterList == nil then
                 parameterList := [Param]
             else  
-                parameterList := {List.append @parameterList Param}
+                parameterList := {List.append @parameterList [Param]}
             end
         end
     end
@@ -175,7 +176,7 @@ declare
                         local Op Pa in
                             Op = H
                             Pa = T
-                            {Browse ['  Operator' Op 'Parameters' Pa 'Instructions' PrefixInstructions]}
+                            % {Browse ['  Operator' Op 'Parameters' Pa 'Instructions' PrefixInstructions]}
                             
                             % Recursively add the operator to the left node and the parameters to the right node
                             {AddOperator Op Pa TreeStruc}
@@ -229,7 +230,7 @@ declare
                 % If it's not an '=', it's a parameter, we add them recursively to the list
 
                 for Param in {Parameters Words 2} do
-                    {Browse ['  · Adding parameter' Param]}
+                    % {Browse ['  · Adding parameter' Param]}
                     {Parser addParameter(Param _)}
                 end
 
@@ -588,8 +589,22 @@ local Code Call in
     % CALL: twice 5
     % /////////////////////////////////////////////////////////////////////////////
 
-    Code = 'fun sum x = x + x * x'
-    Call = 'sum 5'
+
+    % /////////////////////////////////////////////////////////////////////////////
+    % TEST CASE 2
+    % DEFINITION: fun twice x = x + x * x
+    % CALL: twice 5
+    % /////////////////////////////////////////////////////////////////////////////
+
+
+    % /////////////////////////////////////////////////////////////////////////////
+    % TEST CASE 3
+    % DEFINITION: fun twice x y z = x +  y * z
+    % CALL: twice 5 4 3
+    % /////////////////////////////////////////////////////////////////////////////
+
+    Code = 'fun sum x y z = x + y * z'
+    Call = 'sum 5 4 3'
     {Browse ['FIRST TEST CASE']}
     {Browse ['Code:' Code]}
     {Browse ['Call:' Call]}
