@@ -502,7 +502,7 @@ declare
 
                 % if {List.member {List.nth ParametersList 2} ['+' '-' '*' '/' '=' '(' ')']} then
                 
-                % TWO OPERATORS IN A ROW? IN THE OPREATOR FACTORY? HOW QUEER? I'VE NEVER SEEN SUCH A THING-
+                % AN OPERATOR?? IN THE PARAMETER FACTORY? HOW QUEER? I'VE NEVER SEEN SUCH A THING-
                 % I GUESS WE'RE MAKING OPERATORS NOW
 
                 % ADD THE NEXT NON OPERATOR PARAMETER TO THE RIGHT NODE
@@ -513,21 +513,21 @@ declare
                 % Create a new tree with the operator
                 local NewTree NewestList in
 
-                    NewestList = {Remove ParametersList {Index ParametersList {FirstNonOperatorParameter ParametersList}}}
+                    NewestList = {Remove ParametersList {List.length ParametersList}}
                     % {Browse ['  · New list' NewestList]}
 
-                    {Browse ['  · Adding ' {FirstNonOperatorParameter ParametersList} 'to the right node as first parameter of the operator' {List.nth NewestList 1}]}
-                    {Browse ['  · Creating a new tree to the left node for the operator' {List.nth ParametersList 1}]}
-                    {Browse ['  · We"ll now continue with operator' Operator ' over this new right node']}
+                    {Browse ['  · Adding ' {List.last ParametersList} 'to the right node as first parameter of the operator' Operator]}
+                    {Browse ['  · Creating a new tree to the left node for the operator' Operator]}
+                    {Browse ['  · We"ll now continue with operator' {List.nth ParametersList 1} ' over this new right node']}
 
                     % Add the first parameter to the right of the tree
-                    {TreeStruc setRight({New TreeClass init({FirstNonOperatorParameter ParametersList})})}
+                    {TreeStruc setRight({New TreeClass init({List.last ParametersList})})}
 
                     % Create a new tree and set it to the left node
                     NewTree = {New TreeClass init('@')}
 
                     % the leftmost operator is the new operator
-                    {NewTree setLeft({New TreeClass init({List.nth NewestList 1})})}
+                    {NewTree setLeft({New TreeClass init(Operator)})}
 
                     % the rightmost operator is a new tree with a value of '@'
                     {NewTree setRight({New TreeClass init('@')})}
@@ -535,7 +535,7 @@ declare
                     {TreeStruc setLeft(NewTree)}
 
                     % % Recursovely repeat the process over this new left tree
-                    {AddOperator Operator {List.drop NewestList 1} {NewTree getRight($)}}
+                    {AddOperator {List.nth ParametersList 1} {List.drop NewestList 1} {NewTree getRight($)}}
                 end
 
 
@@ -943,6 +943,7 @@ declare
             end
         end
     end
+
 
 % Test case
 local Code Call in
