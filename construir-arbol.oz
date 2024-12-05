@@ -184,9 +184,34 @@ declare
         % This structure represents the memory of the program
 
         meth addParameter(Param ParamValue)
-            % {Browse ['  · Adding parameter' Param 'with value' ParamValue]}
             parameters := {Record.adjoin @parameters parameter(Param:ParamValue)}
             (ParserClass,addParameterToParameterList(Param))
+        end
+
+        % Modified updateParameterValue method to handle integers
+        meth updateParameterValue(Param Value)
+            try
+                % Convert string to integer if it's a number
+                local ConvertedValue in
+                    ConvertedValue = try 
+                        {String.toInt Value}
+                    catch _ then
+                        % If not a number, keep it as an atom
+                        Value
+                    end
+                    
+                    parameters := {Record.adjoinAt @parameters Param ConvertedValue}
+                    
+                    % Update parameter list
+                    local NewParamList in
+                        % Remove old parameter without value and add new one with value
+                        NewParamList = {List.filter @parameterList fun {$ X} X \= Param end}
+                        parameterList := {List.append NewParamList [Param]}
+                    end
+                end
+            catch Ex then
+                {Browse ['Error in updateParameterValue:' Ex]}
+            end
         end
 
         meth getParameterValue(Name $)
@@ -210,7 +235,7 @@ declare
     %  DEFINITION OF THE PARSER FUNCTIONS
     % /////////////////////////////////////////////////////////////////////////////
 
-    proc {ParseCode Words ?TreeResult}
+    proc {ParseCode Words ?TreeResult ?ParserResult}
         
         % Helper function to build the tree
         proc {BuildTree FunctionName Instructions TreeStruc Parser}
@@ -308,7 +333,7 @@ declare
             end
 
             TreeResult = TreeStruc
-
+            ParserResult = Parser
         end
         
     end
@@ -628,7 +653,6 @@ declare
         {StringToAtomAux StringList nil}
     end
 
-
     % /////////////////////////////////////////////////////////////////////////////
     %  DEFINITION OF THE CONCATENATE FUNCTION - CONCATENATE TWO ATOMS
     % /////////////////////////////////////////////////////////////////////////////
@@ -642,22 +666,54 @@ declare
         {String.toAtom {List.append {AtomToString Atom1} {AtomToString Atom2}}}
     end
 
+    proc {EvaluateCall Parser Call}
+        
+        local CallWords ParamValues in
+            CallWords = {Split Call}
+            {Browse ['CallWords:' CallWords]}
+            
+            ParamValues = {List.drop CallWords 1}
+            {Browse ['ParamValues:' ParamValues]}
+            
+            local Params = {Parser getAllParameters($)} in
+                local ZippedPairs in
+                    ZippedPairs = {List.zip Params ParamValues fun {$ X Y} X#Y end}                    
+                    try
+                        {List.forAll ZippedPairs
+                         proc {$ Pair}
+                            local Param Value in
+                                Param#Value = Pair
+                                {Browse ['Updating parameter' Param 'with value' Value]}
+                                {Parser updateParameterValue(Param Value)}
+                            end
+                         end}
+                    catch Ex then
+                        {Browse ['Error in parameter update loop:' Ex]}
+                    end
+                end
+            end
+        end
+    end
+
 % Update the test case
-local Code in
-    {Browse '\nTEST CASE FOR FINDING NEXT REDEX'}
-    Code = 'fun add x y = x + y'
+local Code Call in
+    {Browse 'TEST CASE FOR FINDING NEXT REDEX'}
+    Code = 'fun add x y = x + y + 2'
+    Call = 'add 1 2'
     {Browse ['Code:' Code]}
     
-    local TreeStruc in
+    local TreeStruc Parser in
         % Get the constructed tree from ParseCode
-        {ParseCode {Split Code} TreeStruc}
+        {ParseCode {Split Code} TreeStruc Parser}
         
-        {Browse '\nTree structure before finding redex:'}
+        
+        {Browse 'Tree structure before finding redex:'}
         {Browse {TreeStruc treeStructure($)}}
         {Browse 'Left node: '#if {TreeStruc getLeft($)} == nil then 'nil' else {TreeStruc getLeft($)} end}
         {Browse 'Right node: '#if {TreeStruc getRight($)} == nil then 'nil' else {TreeStruc getRight($)} end}
         
-        {Browse '\nFinding next reducible expression:'}
+        {EvaluateCall Parser Call}
+        {Browse 'Finding next reducible expression:'}
         local Result in
             Result = {TreeStruc findNextRedex($)}
             if Result == nil then
