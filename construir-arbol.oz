@@ -499,22 +499,60 @@ declare
             {TreeStruc setRight({New TreeClass init({List.nth ParametersList 1})})}
         else
             if {List.member {List.nth ParametersList 1} ['+' '-' '*' '/' '=' '(' ')']} then
-                % OH LOOK ITS A NEW OPERATOR, ADD IT TO THE RIGHT NODE, ADD A '@' TO THE LEFT NODE AND CALL THE FUNCTION RECURSIVELY
-                % CONTINUING THE TREE OVER THE NEW RIGHT NODE
-                {Browse ['  · Adding operator' {List.nth ParametersList 1} 'to the right node as a parameter of operator' Operator]}
-                {Browse ['  · Creating a new tree to the left node for the other parameter of operator' Operator]}
-                % Create a new tree with the operator
-                local NewTree in
 
-                    % Add the first parameter to the right of the tree
-                    {TreeStruc setRight({New TreeClass init({List.nth ParametersList 1})})}
+                if {List.member {List.nth ParametersList 2} ['+' '-' '*' '/' '=' '(' ')']} then
+                
+                    % TWO OPERATORS IN A ROW? IN THE OPREATOR FACTORY? HOW QUEER? I'VE NEVER SEEN SUCH A THING-
+                    % I GUESS WE'RE MAKING OPERATORS NOW
 
-                    % Create a new tree and set it to the left node
-                    NewTree = {New TreeClass init('@')}
-                    {TreeStruc setLeft(NewTree)}
+                    % ADD THE NEXT NON OPERATOR PARAMETER TO THE RIGHT NODE
+                    % ADD A TREE WITH A VALUE OF @ TO THE LEFT NODE, AND THE NEXT OPERATOR TO THE LEFT NODE OF THE NEW TREE AND A @ TO THE RIGHT NODE
+                    % CONTINUE THE RECURSION OVER THE NEW RIGHT NODE, REMOVING THE FIRST ELEMENT OF THE PARAMETERS LIST AND THE FIRST NON OPERATOR PARAMETER
 
-                    % % Recursovely repeat the process over this new left tree
-                    {AddOperator Operator {List.drop ParametersList 1} NewTree}
+                    {Browse ['  · Adding operator' {FirstNonOperatorParameter ParametersList} 'to the left node as a operatora ahead of operator ' Operator]}
+                    {Browse ['  · Creating a new tree to the right node for the other parameter of operator' Operator]}
+
+                    % Create a new tree with the operator
+                    local NewTree in
+
+                        % Add the first parameter to the right of the tree
+                        {TreeStruc setRight({New TreeClass init({FirstNonOperatorParameter ParametersList})})}
+
+                        % Create a new tree and set it to the left node
+                        NewTree = {New TreeClass init('@')}
+
+                        % the leftmost operator is the new operator
+                        {NewTree setLeft({New TreeClass init(Operator)})}
+
+                        % the rightmost operator is a new tree with a value of '@'
+                        {NewTree setRight({New TreeClass init('@')})}
+
+                        {TreeStruc setLeft(NewTree)}
+
+                        % % Recursovely repeat the process over this new left tree
+                        {AddOperator Operator {List.substract {List.drop ParametersList 1} {FirstNonOperatorParameter ParametersList}} {NewTree getRight($)}}
+                    end
+
+
+                
+                else 
+                    % OH LOOK ITS A NEW OPERATOR, ADD IT TO THE LEFT NODE, ADD A '@' TO THE RIGHT NODE AND CALL THE FUNCTION RECURSIVELY
+                    % CONTINUING THE TREE OVER THE NEW RIGHT NODE
+                    {Browse ['  · Adding operator' {List.nth ParametersList 1} 'to the left node as a operatora ahead of operator ' Operator]}
+                    {Browse ['  · Creating a new tree to the right node for the other parameter of operator' Operator]}
+                    % Create a new tree with the operator
+                    local NewTree in
+
+                        % Add the first parameter to the right of the tree
+                        {TreeStruc setLeft({New TreeClass init({List.nth ParametersList 1})})}
+
+                        % Create a new tree and set it to the left node
+                        NewTree = {New TreeClass init('@')}
+                        {TreeStruc setRight(NewTree)}
+
+                        % % Recursovely repeat the process over this new left tree
+                        {AddOperator Operator {List.drop ParametersList 1} NewTree}
+                    end
                 end
 
             else
@@ -591,6 +629,34 @@ declare
     in
         {Browse ['  FINDING PARAMETERS AMONG' {List.drop Words OpPos}]}
         {ParametersAux {List.drop Words OpPos} nil}
+    end
+
+    % /////////////////////////////////////////////////////////////////////////////
+    %  DEFINITION OF THE FIRSTNONOPERATORPARAMETER FUNCTION - GETS THE FIRST PARAMETER FROM A LIST OF WORDS THAT IS NOT AN OPERATOR KEYWORD
+    % /////////////////////////////////////////////////////////////////////////////
+
+    fun {FirstNonOperatorParameter Words}
+        % GET THE FIRST PARAMETER THAT IS NOT AN OPERATOR KEYWORD
+        % ALL OPERATORS ARE: +, -, *, /, =, (, )
+    
+        fun {FirstNonOperatorParameterAux Words}
+            case Words of H|T then
+                % {Browse ['  FirstNonOperatorParameterAux' Words]}
+                if {List.member H ['+' '-' '*' '/' '=' '(' ')']} then
+                    % {Browse ['  FOUND AN OPERATOR' H]}
+                    {FirstNonOperatorParameterAux T}
+                else
+                    % {Browse ['  FOUND A PARAMETER' H]}
+                    H
+                end
+            else
+                nil
+            end
+        end
+        
+    in
+        {Browse ['  FINDING FIRST NON OPERATOR PARAMETER AMONG' Words]}
+        {FirstNonOperatorParameterAux Words}
     end
 
     % /////////////////////////////////////////////////////////////////////////////
