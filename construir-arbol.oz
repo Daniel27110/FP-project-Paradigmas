@@ -96,16 +96,16 @@ declare
         end
 
         meth findNextRedex($)
-            % Follow left branch until we find a supercombinator or primitive
-            local FindSupercombinator CountArgs in
+            % Follow left branch until we find a primitive operator
+            local FindPrimitiveOperator GoUpNodes in
                 
-                proc {FindSupercombinator Node ?Result}
+                proc {FindPrimitiveOperator Node ?Result}
                     {Browse '  Examining node with value: '#({Node getValue($)})}
                     if Node == nil then
                         {Browse '  Node is nil'}
                         Result = nil
                     else 
-                        % Check if current node is a supercombinator or primitive
+                        % Check if current node is a primitive operator
                         if {List.member {Node getValue($)} ['+' '-' '*' '/' '=']} then
                             % Found a primitive operator
                             {Browse '  Found primitive operator: '#({Node getValue($)})}
@@ -116,64 +116,46 @@ declare
                             local LeftNode in
                                 LeftNode = {Node getLeft($)}
                                 if LeftNode == nil then
-                                    {Browse '  Left branch is nil, returning current node'}
-                                    Result = Node
+                                    {Browse '  Left branch is nil, returning nil'}
+                                    Result = nil
                                 else
-                                    {FindSupercombinator LeftNode Result}
+                                    {FindPrimitiveOperator LeftNode Result}
                                 end
                             end
                         else
-                            % Found a potential supercombinator (variable or value)
-                            {Browse '  Found potential supercombinator: '#({Node getValue($)})}
-                            Result = Node
+                            {Browse '  Found non-primitive node, returning nil'}
+                            Result = nil
                         end
                     end
                 end
         
-                % Count number of arguments (@ nodes) above current node
-                fun {CountArgs Node Count}
-                    {Browse '  Counting args at node: '#({Node getValue($)})}
-                    if Node == nil then 
-                        {Browse '  Reached nil node, count: '#Count}
-                        Count
+                % Go up N application nodes from current node
+                fun {GoUpNodes Node Count CurrentNode}
+                    if Count == 0 then CurrentNode
                     else
                         if {Node getValue($)} == '@' then
-                            {Browse '  Found @ node, incrementing count'}
-                            local LeftNode in
-                                LeftNode = {Node getLeft($)}
-                                if LeftNode == nil then Count + 1
-                                else {CountArgs LeftNode Count+1}
-                                end
-                            end
-                        else 
-                            {Browse '  Found non-@ node, returning count: '#Count}
-                            Count
+                            {GoUpNodes Node Count-1 Node}
+                        else
+                            CurrentNode
                         end
                     end
                 end
         
-                local Supercomb Args RootNode in
-                    % Start from the root node (self represents the entire tree)
+                local PrimitiveOp RootNode in
+                    % Start from the root node
                     RootNode = self
                     {Browse '\nTree structure: '#({RootNode treeStructure($)})}
-                    {Browse 'Left node: '#if {RootNode getLeft($)} == nil then 'nil' else {RootNode getLeft($)} end}
-                    {Browse 'Right node: '#if {RootNode getRight($)} == nil then 'nil' else {RootNode getRight($)} end}
                     
-                    % Find the supercombinator starting from root
-                    {FindSupercombinator RootNode Supercomb}
+                    % Find the primitive operator
+                    {FindPrimitiveOperator RootNode PrimitiveOp}
                     
-                    if Supercomb == nil then
-                        {Browse '  No supercombinator found'}
+                    if PrimitiveOp == nil then
+                        {Browse '  No primitive operator found'}
                         nil
                     else
-                        {Browse '  Supercombinator found: '#({Supercomb getValue($)})}
-                        
-                        % Count arguments
-                        Args = {CountArgs RootNode 0}
-                        {Browse '  Number of arguments: '#Args}
-        
-                        % Return the found supercombinator
-                        Supercomb
+                        {Browse '  Primitive operator found: '#({PrimitiveOp getValue($)})}
+                        % Go up 2 @ nodes to find the complete expression
+                        {GoUpNodes RootNode 2 PrimitiveOp}
                     end
                 end
             end
