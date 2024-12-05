@@ -95,6 +95,122 @@ declare
 
         end
 
+        meth findNextRedex($)
+            % Follow left branch until we find a primitive operator
+            local FindPrimitiveOperator GoUpNodes in
+                
+                proc {FindPrimitiveOperator Node ?Result}
+                    {Browse '  Examining node with value: '#({Node getValue($)})}
+                    if Node == nil then
+                        {Browse '  Node is nil'}
+                        Result = nil
+                    else 
+                        % Check if current node is a primitive operator
+                        if {List.member {Node getValue($)} ['+' '-' '*' '/' '=']} then
+                            % Found a primitive operator
+                            {Browse '  Found primitive operator: '#({Node getValue($)})}
+                            Result = Node
+                        elseif {Node getValue($)} == '@' then
+                            % Continue searching left branch
+                            {Browse '  Found @ node, searching left branch'}
+                            local LeftNode in
+                                LeftNode = {Node getLeft($)}
+                                if LeftNode == nil then
+                                    {Browse '  Left branch is nil, returning nil'}
+                                    Result = nil
+                                else
+                                    {FindPrimitiveOperator LeftNode Result}
+                                end
+                            end
+                        else
+                            {Browse '  Found non-primitive node, returning nil'}
+                            Result = nil
+                        end
+                    end
+                end
+        
+                % Go up N application nodes from current node
+                fun {GoUpNodes Node Count CurrentNode}
+                    if Count == 0 then CurrentNode
+                    else
+                        if {Node getValue($)} == '@' then
+                            {GoUpNodes Node Count-1 Node}
+                        else
+                            CurrentNode
+                        end
+                    end
+                end
+        
+                local PrimitiveOp RootNode in
+                    % Start from the root node
+                    RootNode = self
+                    {Browse '\nTree structure: '#({RootNode treeStructure($)})}
+                    
+                    % Find the primitive operator
+                    {FindPrimitiveOperator RootNode PrimitiveOp}
+                    
+                    if PrimitiveOp == nil then
+                        {Browse '  No primitive operator found'}
+                        nil
+                    else
+                        {Browse '  Primitive operator found: '#({PrimitiveOp getValue($)})}
+                        % Go up 2 @ nodes to find the complete expression
+                        {GoUpNodes RootNode 2 PrimitiveOp}
+                    end
+                end
+            end
+        end
+        % Add reduce method to TreeClass
+        meth reduce($)
+            local EvaluatePrimitive in
+                % Helper function to evaluate primitive operations
+                fun {EvaluatePrimitive Op Left Right}
+                    {Browse ['Evaluating' Op Left Right]}
+                    case Op
+                    of '+' then Left + Right
+                    [] '-' then Left - Right
+                    [] '*' then Left * Right
+                    [] '/' then Left div Right
+                    else 
+                        {Browse ['Unknown operator' Op]}
+                        nil
+                    end
+                end
+
+                % Find the next reducible expression
+                local Redex in
+                    Redex = {self findNextRedex($)}
+                    if Redex == nil then
+                        {Browse 'No reducible expression found'}
+                        self
+                    else
+                        local Op LeftVal RightVal in
+                            Op = {Redex getValue($)}
+                            {Browse ['Found redex with operator' Op]}
+                            
+                            % Get left and right values
+                            LeftVal = if {Redex getLeft($)} == nil then nil 
+                                    else {{Redex getLeft($)} getValue($)} end
+                            RightVal = if {Redex getRight($)} == nil then nil 
+                                    else {{Redex getRight($)} getValue($)} end
+                            
+                            % Evaluate primitive operation
+                            if {List.member Op ['+' '-' '*' '/']} then
+                                local Result in
+                                    Result = {EvaluatePrimitive Op LeftVal RightVal}
+                                    {Browse ['Result:' Result]}
+                                    % Update the tree with the result
+                                    {Redex setValue(Result)}
+                                    {Redex setLeft(nil)}
+                                    {Redex setRight(nil)}
+                                end
+                            end
+                        end
+                        self
+                    end
+                end
+            end
+        end
     end
 
     % /////////////////////////////////////////////////////////////////////////////
@@ -575,45 +691,30 @@ declare
         {String.toAtom {List.append {AtomToString Atom1} {AtomToString Atom2}}}
     end
 
-
-local Code Call in
-
-    % /////////////////////////////////////////////////////////////////////////////
-    % TEST CASES
-    % EACH TEST CASE HAS A DEFINITION AND A CALL, AS DEFINED BY THE REQUIREMENTS
-    % /////////////////////////////////////////////////////////////////////////////
-
-    % /////////////////////////////////////////////////////////////////////////////
-    % TEST CASE 1
-    % DEFINITION: fun twice x = x + x
-    % CALL: twice 5
-    % /////////////////////////////////////////////////////////////////////////////
-
-
-    % /////////////////////////////////////////////////////////////////////////////
-    % TEST CASE 2
-    % DEFINITION: fun twice x = x + x * x
-    % CALL: twice 5
-    % /////////////////////////////////////////////////////////////////////////////
-
-
-    % /////////////////////////////////////////////////////////////////////////////
-    % TEST CASE 3
-    % DEFINITION: fun twice x y z = x +  y * z
-    % CALL: twice 5 4 3
-    % /////////////////////////////////////////////////////////////////////////////
-
-    Code = 'fun sum x y z = x + y * z'
-    Call = 'sum 5 4 3'
-    {Browse ['FIRST TEST CASE']}
-    {Browse ['Code:' Code]}
-    {Browse ['Call:' Call]}
-
-    {Browse '---'}
-
-    {ParseCode {Split Code}}
-    
-
-
-    % /////////////////////////////////////////////////////////////////////////////
-end
+% Test case for Task 2 - Finding next reducible expression
+    local Code in
+        {Browse '\nTEST CASE FOR FINDING NEXT REDEX'}
+        Code = 'fun add x y = x + y'
+        {Browse ['Code:' Code]}
+        
+        local TreeStruc Parser in
+            % Create parser and tree
+            Parser = {New ParserClass init()}
+            
+            % Parse the code
+            {ParseCode {Split Code}}
+            
+            {Browse '\nTree structure:'}
+            {Browse {TreeStruc treeStructure($)}}
+            
+            {Browse '\nFinding next reducible expression:'}
+            local Redex in
+                Redex = {TreeStruc findNextRedex($)}
+                if Redex == nil then
+                    {Browse 'ERROR: No reducible expression found'}
+                else
+                    {Browse ['Found reducible expression with value:' {Redex getValue($)}]}
+                end
+            end
+        end
+    end
