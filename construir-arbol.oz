@@ -52,6 +52,51 @@ declare
 
         end
 
+        % Add to TreeClass
+        meth printTree()
+            local PrintLevel in
+                proc {PrintLevel Nodes Level}
+                    % If no more nodes to print, we're done
+                    if Nodes == nil then
+                        skip
+                    else
+                        % Print current level number
+                        {Browse ['Level' Level ':']}
+                        
+                        % Print values for current level
+                        {Browse ['Values:' {Map Nodes fun {$ Node} 
+                            if Node == nil then 'nil'
+                            else {Node getValue($)} end
+                        end}]}
+                        
+                        % Gather nodes for next level
+                        local NextLevel in
+                            NextLevel = {FoldL Nodes 
+                                fun {$ Acc Node}
+                                    if Node == nil then
+                                        {Append Acc [nil nil]}
+                                    else
+                                        {Append Acc [{Node getLeft($)} {Node getRight($)}]}
+                                    end
+                                end nil}
+                            
+                            % Check if next level has any non-nil nodes
+                            if {All NextLevel fun {$ X} X == nil end} then
+                                skip
+                            else
+                                % Continue with next level
+                                {PrintLevel NextLevel Level+1}
+                            end
+                        end
+                    end
+                end
+                
+                % Start printing from root (level 0)
+                {Browse '\nTree Structure:'}
+                {PrintLevel [self] 0}
+            end
+        end
+
         meth inorderHelper(ListCell Left Right)
 
             % left
@@ -95,42 +140,58 @@ declare
 
         end
 
+        % Ensure findNextRedex has debug statements
         meth findNextRedex($)
             % Follow left branch until we find a primitive operator
             local FindPrimitiveOperator GoUpNodes in
                 
                 proc {FindPrimitiveOperator Node ?Result}
-                    {Browse '  Examining node with value: '#({Node getValue($)})}
+                    {Browse ['Examining node with value:' {Node getValue($)}]}
                     if Node == nil then
-                        {Browse '  Node is nil'}
+                        {Browse 'Node is nil'}
                         Result = nil
                     else 
                         % Check if current node is a primitive operator
                         if {List.member {Node getValue($)} ['+' '-' '*' '/' '=']} then
                             % Found a primitive operator
-                            {Browse '  Found primitive operator: '#({Node getValue($)})}
+                            {Browse ['Found primitive operator:' {Node getValue($)}]}
                             Result = Node
                         elseif {Node getValue($)} == '@' then
                             % Continue searching left branch
-                            {Browse '  Found @ node, searching left branch'}
+                            {Browse 'Found @ node, searching left branch'}
                             local LeftNode in
                                 LeftNode = {Node getLeft($)}
                                 if LeftNode == nil then
-                                    {Browse '  Left branch is nil, returning nil'}
+                                    {Browse 'Left branch is nil, returning nil'}
                                     Result = nil
                                 else
                                     {FindPrimitiveOperator LeftNode Result}
                                 end
                             end
                         else
-                            {Browse '  Found non-primitive node, returning nil'}
+                            {Browse 'Found non-primitive node, returning nil'}
                             Result = nil
                         end
                     end
                 end
-        
-                % Go up N application nodes from current node
+
                 fun {GoUpNodes Node Count CurrentNode}
+                    {Browse ['Going up' Count 'nodes from current node with value:' {CurrentNode getValue($)}]}
+                    
+                    % Check and print the right node value
+                    if {CurrentNode getRight($)} \= nil then
+                        {Browse ['Current node to the right value:' {{CurrentNode getRight($)} getValue($)}]}
+                    else
+                        {Browse 'Current node to the right is nil'}
+                    end
+                    
+                    % Check and print the left node value
+                    if {CurrentNode getLeft($)} \= nil then
+                        {Browse ['Current node to the left value:' {{CurrentNode getLeft($)} getValue($)}]}
+                    else
+                        {Browse 'Current node to the left is nil'}
+                    end
+                    
                     if Count == 0 then CurrentNode
                     else
                         if {Node getValue($)} == '@' then
@@ -140,25 +201,104 @@ declare
                         end
                     end
                 end
-        
+
                 local PrimitiveOp RootNode in
                     % Start from the root node
                     RootNode = self
-                    {Browse '\nTree structure: '#({RootNode treeStructure($)})}
+                    {Browse ['Tree structure:' {RootNode treeStructure($)}]}
                     
                     % Find the primitive operator
                     {FindPrimitiveOperator RootNode PrimitiveOp}
                     
                     if PrimitiveOp == nil then
-                        {Browse '  No primitive operator found'}
+                        {Browse 'No primitive operator found'}
                         nil
                     else
-                        {Browse '  Primitive operator found: '#({PrimitiveOp getValue($)})}
+                        {Browse ['Primitive operator found:' {PrimitiveOp getValue($)}]}
                         % Go up 2 @ nodes to find the complete expression
                         {GoUpNodes RootNode 2 PrimitiveOp}
                     end
                 end
             end
+        end
+
+        % Evaluate the tree
+        meth evaluate(Parser)
+            local EvaluateStep in
+                proc {EvaluateStep}
+                    local RedexNode in
+                        {Browse '\nStarting evaluation step'}
+                        {Browse ['Current tree structure:' {self treeStructure($)}]}
+                        
+                        RedexNode = {self findNextRedex($)}
+                        if RedexNode == nil then
+                            {Browse 'No more redexes to evaluate'}
+                        else
+                            {Browse ['Found redex node with value:' {RedexNode getValue($)}]}
+                            % Get the primitive operator (two nodes to the left)
+                            local Primitive Arg1 Arg2 in
+                                Primitive = {{RedexNode getLeft($)} getLeft($)}
+                                {Browse ['Primitive operator:' {Primitive getValue($)}]}
+                                
+                                % Get first argument (one node to the left and one to the right)
+                                Arg1 = {{RedexNode getLeft($)} getRight($)}
+                                {Browse ['Arg1 raw value:' {Arg1 getValue($)} 'type:' {Value.type {Arg1 getValue($)}}]}
+                                
+                                % Get second argument (one node to the right)
+                                Arg2 = {RedexNode getRight($)}
+                                {Browse ['Arg2 raw value:' {Arg2 getValue($)} 'type:' {Value.type {Arg2 getValue($)}}]}
+                                
+                                % Get the actual values (either direct or from parser)
+                                local Value1 Value2 Result in
+                                    Value1 = try
+                                        {String.toInt {Arg1 getValue($)}}
+                                    catch _ then
+                                        {Parser getParameterValue({Arg1 getValue($)} $)}
+                                    end
+                                    {Browse ['Value1 resolved to:' Value1]}
+                                    
+                                    Value2 = try
+                                        {String.toInt {Arg2 getValue($)}}
+                                    catch _ then
+                                        {Parser getParameterValue({Arg2 getValue($)} $)}
+                                    end
+                                    {Browse ['Value2 resolved to:' Value2]}
+                                    
+                                    % Perform the operation
+                                    Result = case {Primitive getValue($)}
+                                    of '+' then Value1 + Value2
+                                    [] '-' then Value1 - Value2
+                                    [] '*' then Value1 * Value2
+                                    [] '/' then Value1 div Value2
+                                    [] '=' then Value1 == Value2
+                                    end
+                                    
+                                    % Update the redex node with the result
+                                    {RedexNode setValue(Result)}
+                                    {RedexNode setLeft(nil)}
+                                    {RedexNode setRight(nil)}
+                                    
+                                    {Browse ['After evaluation:']}
+                                    {Browse ['- Result:' Result]}
+                                    {Browse ['- Updated tree structure:' {self treeStructure($)}]}
+                                    
+                                    % Continue evaluation
+                                    {EvaluateStep}
+                                end
+                            end
+                        end
+                    end
+                end
+                
+                % Start the evaluation process
+                {Browse '\nStarting evaluation process'}
+                {EvaluateStep}
+            end
+        end
+
+        % Add setter for value
+        meth setValue(Value)
+            value := Value
         end
     end
 
@@ -171,12 +311,13 @@ declare
     class ParserClass
 
         % Attributes
-        attr parameters parameterList
+        attr parameters parameterList functionName
 
         % Constructor
-        meth init()
+        meth init(FunctionName)
             parameters := parameters()
             parameterList := nil
+            functionName := FunctionName
         end
 
         % Parameters
@@ -305,7 +446,7 @@ declare
         local TreeStruc FunctionName Parser in
 
             % Create a new parser
-            Parser = {New ParserClass init()}
+            Parser = {New ParserClass init(FunctionName)}
 
             % The first word is allways 'fun', we can ignore it
 
@@ -667,24 +808,47 @@ declare
     end
 
     proc {EvaluateCall Parser Call}
+        {Browse '\nStarting EvaluateCall'}
+        {Browse ['Call:' Call]}
         
+        % Split the call into words
         local CallWords ParamValues in
             CallWords = {Split Call}
             {Browse ['CallWords:' CallWords]}
             
+            % Get the parameter values (everything after the function name)
             ParamValues = {List.drop CallWords 1}
             {Browse ['ParamValues:' ParamValues]}
             
+            % Get the list of parameters from the parser
             local Params = {Parser getAllParameters($)} in
+                {Browse ['Parser Parameters:' Params]}
+                
+                % Debug the zip operation
                 local ZippedPairs in
-                    ZippedPairs = {List.zip Params ParamValues fun {$ X Y} X#Y end}                    
+                    ZippedPairs = {List.zip Params ParamValues fun {$ X Y} X#Y end}
+                    {Browse ['Zipped Pairs:' ZippedPairs]}
+                    
+                    % Iterate through parameters and assign values
                     try
                         {List.forAll ZippedPairs
                          proc {$ Pair}
                             local Param Value in
+                                {Browse ['Processing pair:' Pair]}
                                 Param#Value = Pair
                                 {Browse ['Updating parameter' Param 'with value' Value]}
-                                {Parser updateParameterValue(Param Value)}
+                                % Convert string to integer if possible
+                                local ConvertedValue in
+                                    ConvertedValue = try 
+                                        {String.toInt Value}
+                                    catch _ then
+                                        % If not a number, keep it as an atom
+                                        Value
+                                    end
+                                    
+                                    % Update parameter value in parser
+                                    {Parser updateParameterValue(Param ConvertedValue)}
+                                end
                             end
                          end}
                     catch Ex then
@@ -693,34 +857,32 @@ declare
                 end
             end
         end
+        {Browse 'EvaluateCall completed'}
     end
 
-% Update the test case
+% Test case
 local Code Call in
-    {Browse 'TEST CASE FOR FINDING NEXT REDEX'}
-    Code = 'fun add x y = x + y + 2'
-    Call = 'add 1 2'
-    {Browse ['Code:' Code]}
+    Code = 'fun add x y z = x * y + z'  % More complex expression
+    Call = 'add 1 2 3'
     
     local TreeStruc Parser in
         % Get the constructed tree from ParseCode
         {ParseCode {Split Code} TreeStruc Parser}
+        % In your test case
+        {TreeStruc printTree()}
         
-        
-        {Browse 'Tree structure before finding redex:'}
-        {Browse {TreeStruc treeStructure($)}}
-        {Browse 'Left node: '#if {TreeStruc getLeft($)} == nil then 'nil' else {TreeStruc getLeft($)} end}
-        {Browse 'Right node: '#if {TreeStruc getRight($)} == nil then 'nil' else {TreeStruc getRight($)} end}
-        
+        % Evaluate the call to assign parameter values
         {EvaluateCall Parser Call}
-        {Browse 'Finding next reducible expression:'}
-        local Result in
-            Result = {TreeStruc findNextRedex($)}
-            if Result == nil then
-                {Browse 'ERROR: No reducible expression found'}
-            else
-                {Browse ['Found reducible expression with value:' {Result getValue($)}]}
-            end
-        end
+        
+        % Print initial tree structure
+        {Browse 'Initial tree structure:'}
+        {Browse {TreeStruc treeStructure($)}}
+        
+        % Evaluate the tree until fully reduced
+        {TreeStruc evaluate(Parser)}
+        
+        % Print final tree structure
+        {Browse 'Final tree structure:'}
+        {Browse {TreeStruc treeStructure($)}}
     end
 end
