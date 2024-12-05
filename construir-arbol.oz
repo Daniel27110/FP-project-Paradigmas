@@ -96,16 +96,16 @@ declare
         end
 
         meth findNextRedex($)
-            % Follow left branch until we find a primitive operator
-            local FindPrimitiveOperator GoUpNodes in
+            % Follow left branch until we find a supercombinator or primitive
+            local FindSupercombinator CountArgs in
                 
-                proc {FindPrimitiveOperator Node ?Result}
+                proc {FindSupercombinator Node ?Result}
                     {Browse '  Examining node with value: '#({Node getValue($)})}
                     if Node == nil then
                         {Browse '  Node is nil'}
                         Result = nil
                     else 
-                        % Check if current node is a primitive operator
+                        % Check if current node is a supercombinator or primitive
                         if {List.member {Node getValue($)} ['+' '-' '*' '/' '=']} then
                             % Found a primitive operator
                             {Browse '  Found primitive operator: '#({Node getValue($)})}
@@ -116,102 +116,71 @@ declare
                             local LeftNode in
                                 LeftNode = {Node getLeft($)}
                                 if LeftNode == nil then
-                                    {Browse '  Left branch is nil, returning nil'}
-                                    Result = nil
+                                    {Browse '  Left branch is nil, returning current node'}
+                                    Result = Node
                                 else
-                                    {FindPrimitiveOperator LeftNode Result}
+                                    {FindSupercombinator LeftNode Result}
                                 end
                             end
                         else
-                            {Browse '  Found non-primitive node, returning nil'}
-                            Result = nil
+                            % Found a potential supercombinator (variable or value)
+                            {Browse '  Found potential supercombinator: '#({Node getValue($)})}
+                            Result = Node
                         end
                     end
                 end
         
-                % Go up N application nodes from current node
-                fun {GoUpNodes Node Count CurrentNode}
-                    if Count == 0 then CurrentNode
+                % Count number of arguments (@ nodes) above current node
+                fun {CountArgs Node Count}
+                    {Browse '  Counting args at node: '#({Node getValue($)})}
+                    if Node == nil then 
+                        {Browse '  Reached nil node, count: '#Count}
+                        Count
                     else
                         if {Node getValue($)} == '@' then
-                            {GoUpNodes Node Count-1 Node}
-                        else
-                            CurrentNode
+                            {Browse '  Found @ node, incrementing count'}
+                            local LeftNode in
+                                LeftNode = {Node getLeft($)}
+                                if LeftNode == nil then Count + 1
+                                else {CountArgs LeftNode Count+1}
+                                end
+                            end
+                        else 
+                            {Browse '  Found non-@ node, returning count: '#Count}
+                            Count
                         end
                     end
                 end
         
-                local PrimitiveOp RootNode in
-                    % Start from the root node
+                local Supercomb Args RootNode in
+                    % Start from the root node (self represents the entire tree)
                     RootNode = self
                     {Browse '\nTree structure: '#({RootNode treeStructure($)})}
+                    {Browse 'Left node: '#if {RootNode getLeft($)} == nil then 'nil' else {RootNode getLeft($)} end}
+                    {Browse 'Right node: '#if {RootNode getRight($)} == nil then 'nil' else {RootNode getRight($)} end}
                     
-                    % Find the primitive operator
-                    {FindPrimitiveOperator RootNode PrimitiveOp}
+                    % Find the supercombinator starting from root
+                    {FindSupercombinator RootNode Supercomb}
                     
-                    if PrimitiveOp == nil then
-                        {Browse '  No primitive operator found'}
+                    if Supercomb == nil then
+                        {Browse '  No supercombinator found'}
                         nil
                     else
-                        {Browse '  Primitive operator found: '#({PrimitiveOp getValue($)})}
-                        % Go up 2 @ nodes to find the complete expression
-                        {GoUpNodes RootNode 2 PrimitiveOp}
-                    end
-                end
-            end
-        end
-        % Add reduce method to TreeClass
-        meth reduce($)
-            local EvaluatePrimitive in
-                % Helper function to evaluate primitive operations
-                fun {EvaluatePrimitive Op Left Right}
-                    {Browse ['Evaluating' Op Left Right]}
-                    case Op
-                    of '+' then Left + Right
-                    [] '-' then Left - Right
-                    [] '*' then Left * Right
-                    [] '/' then Left div Right
-                    else 
-                        {Browse ['Unknown operator' Op]}
-                        nil
-                    end
-                end
-
-                % Find the next reducible expression
-                local Redex in
-                    Redex = {self findNextRedex($)}
-                    if Redex == nil then
-                        {Browse 'No reducible expression found'}
-                        self
-                    else
-                        local Op LeftVal RightVal in
-                            Op = {Redex getValue($)}
-                            {Browse ['Found redex with operator' Op]}
-                            
-                            % Get left and right values
-                            LeftVal = if {Redex getLeft($)} == nil then nil 
-                                    else {{Redex getLeft($)} getValue($)} end
-                            RightVal = if {Redex getRight($)} == nil then nil 
-                                    else {{Redex getRight($)} getValue($)} end
-                            
-                            % Evaluate primitive operation
-                            if {List.member Op ['+' '-' '*' '/']} then
-                                local Result in
-                                    Result = {EvaluatePrimitive Op LeftVal RightVal}
-                                    {Browse ['Result:' Result]}
-                                    % Update the tree with the result
-                                    {Redex setValue(Result)}
-                                    {Redex setLeft(nil)}
-                                    {Redex setRight(nil)}
-                                end
-                            end
-                        end
-                        self
+                        {Browse '  Supercombinator found: '#({Supercomb getValue($)})}
+                        
+                        % Count arguments
+                        Args = {CountArgs RootNode 0}
+                        {Browse '  Number of arguments: '#Args}
+        
+                        % Return the found supercombinator
+                        Supercomb
                     end
                 end
             end
         end
     end
+
+    
 
     % /////////////////////////////////////////////////////////////////////////////
     % DEFINITION OF THE PARSER OBJECT - OUR KNOWLEDGE BASE FOR THE PARSER
@@ -259,7 +228,7 @@ declare
     %  DEFINITION OF THE PARSER FUNCTIONS
     % /////////////////////////////////////////////////////////////////////////////
 
-    proc {ParseCode Words}
+    proc {ParseCode Words ?TreeResult}
         
         % Helper function to build the tree
         proc {BuildTree FunctionName Instructions TreeStruc Parser}
@@ -356,7 +325,7 @@ declare
 
             end
 
-
+            TreeResult = TreeStruc
 
         end
         
@@ -691,30 +660,29 @@ declare
         {String.toAtom {List.append {AtomToString Atom1} {AtomToString Atom2}}}
     end
 
-% Test case for Task 2 - Finding next reducible expression
-    local Code in
-        {Browse '\nTEST CASE FOR FINDING NEXT REDEX'}
-        Code = 'fun add x y = x + y'
-        {Browse ['Code:' Code]}
+% Update the test case
+local Code in
+    {Browse '\nTEST CASE FOR FINDING NEXT REDEX'}
+    Code = 'fun add x y = x + y'
+    {Browse ['Code:' Code]}
+    
+    local TreeStruc in
+        % Get the constructed tree from ParseCode
+        {ParseCode {Split Code} TreeStruc}
         
-        local TreeStruc Parser in
-            % Create parser and tree
-            Parser = {New ParserClass init()}
-            
-            % Parse the code
-            {ParseCode {Split Code}}
-            
-            {Browse '\nTree structure:'}
-            {Browse {TreeStruc treeStructure($)}}
-            
-            {Browse '\nFinding next reducible expression:'}
-            local Redex in
-                Redex = {TreeStruc findNextRedex($)}
-                if Redex == nil then
-                    {Browse 'ERROR: No reducible expression found'}
-                else
-                    {Browse ['Found reducible expression with value:' {Redex getValue($)}]}
-                end
+        {Browse '\nTree structure before finding redex:'}
+        {Browse {TreeStruc treeStructure($)}}
+        {Browse 'Left node: '#if {TreeStruc getLeft($)} == nil then 'nil' else {TreeStruc getLeft($)} end}
+        {Browse 'Right node: '#if {TreeStruc getRight($)} == nil then 'nil' else {TreeStruc getRight($)} end}
+        
+        {Browse '\nFinding next reducible expression:'}
+        local Result in
+            Result = {TreeStruc findNextRedex($)}
+            if Result == nil then
+                {Browse 'ERROR: No reducible expression found'}
+            else
+                {Browse ['Found reducible expression with value:' {Result getValue($)}]}
             end
         end
     end
+end
