@@ -491,74 +491,44 @@ declare
         % and call the function recursively with the rest of the parameters and the new tree
         
         if {List.length ParametersList} == 1 then
-
+            {Browse ['  · Finnishing up with the last branch']}
             {Browse ['  · Adding operator' Operator 'to the left node and parameter' {List.nth ParametersList 1} 'to the right node']}
             % Add the operator to the left node
             {TreeStruc setLeft({New TreeClass init(Operator)})}
             % Add the parameter to the right node
             {TreeStruc setRight({New TreeClass init({List.nth ParametersList 1})})}
         else
-            if {List.member {List.nth ParametersList 1} ['+' '-' '*' '/' '=' '(' ')']} then
 
-                % if {List.member {List.nth ParametersList 2} ['+' '-' '*' '/' '=' '(' ')']} then
-                
-                % AN OPERATOR?? IN THE PARAMETER FACTORY? HOW QUEER? I'VE NEVER SEEN SUCH A THING-
-                % I GUESS WE'RE MAKING OPERATORS NOW
+            % Create a new tree with the operator
+            local NewTree NewestList in
 
-                % ADD THE NEXT NON OPERATOR PARAMETER TO THE RIGHT NODE
-                % ADD A TREE WITH A VALUE OF @ TO THE LEFT NODE, AND THE NEXT OPERATOR TO THE LEFT NODE OF THE NEW TREE AND A @ TO THE RIGHT NODE
-                % CONTINUE THE RECURSION OVER THE NEW RIGHT NODE, REMOVING THE FIRST ELEMENT OF THE PARAMETERS LIST AND THE FIRST NON OPERATOR PARAMETER
+                {Browse ['PARAMETERS LIST' ParametersList 'OPERATOR' Operator]}
+
+                NewestList = {Remove ParametersList {Index ParametersList {FindNextParameter ParametersList}}}
+                if {List.member {List.nth NewestList 1} ['+' '-' '*' '/' '=' '(' ')']} then
+
+                    % if {List.member {List.nth ParametersList 2} ['+' '-' '*' '/' '=' '(' ')']} then
+                    
+                    % AN OPERATOR?? IN THE PARAMETER FACTORY? HOW QUEER? I'VE NEVER SEEN SUCH A THING-
+                    % I GUESS WE'RE MAKING OPERATORS NOW
+
+                    % ADD THE NEXT NON OPERATOR PARAMETER TO THE RIGHT NODE
+                    % ADD A TREE WITH A VALUE OF @ TO THE LEFT NODE, AND THE NEXT OPERATOR TO THE LEFT NODE OF THE NEW TREE AND A @ TO THE RIGHT NODE
+                    % CONTINUE THE RECURSION OVER THE NEW RIGHT NODE, REMOVING THE FIRST ELEMENT OF THE PARAMETERS LIST AND THE FIRST NON OPERATOR PARAMETER
 
 
-                % Create a new tree with the operator
-                local NewTree NewestList in
-
-                    NewestList = {Remove ParametersList {Index ParametersList {FindNextParameter ParametersList}}}
                     % {Browse ['  · New list' NewestList]}
-                    
-                    
-                    if {List.length NewestList} == 2 then
 
-                        %{Browse ['  IF YOU CAN READ THIS, THINGS HAVE GONE HORRIBLY WRONG, THE LIST IS' NewestList]}
-                        % IGNORE THE COMMENT ABOVE, IT'S A LIE, EVERYTHING IS FINE, WE CHILLING
+                    if {Not {List.member {List.nth ParametersList 1}  ['+' '-' '*' '/' '=' '(' ')']}} then
+                        % IF WE'RE HERE IS BECAUSE WHOEVER WROTE THE INPUT IS NOT RESPECTING PENDAS AND WROTE SOMETHING WEIRD
+                        % OK CALM DOWN, WE CAN HANDLE THIS
 
-                        % WE'RE IN THE LAST STAGE OF THE TREE, IF WE'RE HERE IS BECAUSE SOME (HORRID) PARENTHESIS WAS USED
-                        % BUT WE'RE SMART ENOUGH TO HANDLE IT
-
-                        % PARAMETER LIST SHOULD BE SOMETHING OF THE FORM ['+' '1' 'x'] now.
-                        % we've done this before, just put the parameter to the right of the tree, and on the left
-                        % put a new tree with value '@' and the operator to the left of the new tree and the last remaining parameter to the right of the new tree
-
-                        % BUT BEFORE THAT PUT THE ACTUAL OPERATOR TO THE LEFT OF THE TREE, AND CREATE A NEW TREE WITH A @ TO THE RIGHT (THIS SOUND SCHIZOPHRENIC BUT TRUST ME ITS A HYPERSPECIFIC CASE)
-                        {Browse ['  · Almost done!']}
-                        {Browse ['  · Adding operator ' Operator 'to the left node as second to last operator of the tree']}
-
-                        % Add the operator to the left of the tree
-                        {TreeStruc setLeft({New TreeClass init(Operator)})}
-
-                        % create a new tree to the right with value '@'
-                        NewTree = {New TreeClass init('@')}
-                        {TreeStruc setRight(NewTree)}
-
-                        % TRUST THAT OUR ELSE CASE WILL HANDLE THE REST OF THE TREE :D
-                        {AddOperator {List.nth ParametersList 1} {List.drop ParametersList 1} NewTree}
-
-                        % % Create a new tree and set it to the left node
-                        % NewTree = {New TreeClass init('@')}
-                        % {TreeStruc setLeft(NewTree)}
-
-                        % % the leftmost operator is the new operator
-                        % {NewTree setLeft({New TreeClass init({List.nth NewestList 1})})}
-                        % % the rightmost operator is a new tree with the last remaining parameter
-                        % {NewTree setRight({New TreeClass init({FindNextParameter {Remove NewestList {Index NewestList {FindNextParameter NewestList}}}})})} % i hope you're proud of yourselfs
-
-                    else
-                        {Browse ['  · Adding ' {FindNextParameter ParametersList} 'to the right node as first parameter of the operator' Operator]}
+                        {Browse ['  · Adding ' {List.nth ParametersList 1} 'to the right node as first parameter of the operator' Operator]}
                         {Browse ['  · Creating a new tree to the left node for the operator' Operator]}
-                        {Browse ['  · We"ll now continue with operator' {List.nth ParametersList 1} 'over this new left tree']}
+                        {Browse ['  · We"ll now continue with operator' {List.nth NewestList 1} 'over this new left tree']}
 
                         % Add the first parameter to the right of the tree
-                        {TreeStruc setRight({New TreeClass init({FindNextParameter ParametersList})})}
+                        {TreeStruc setRight({New TreeClass init({List.nth ParametersList 1})})}
 
                         % Create a new tree and set it to the left node
                         NewTree = {New TreeClass init('@')}
@@ -572,50 +542,110 @@ declare
                         {TreeStruc setLeft(NewTree)}
 
                         % % Recursovely repeat the process over this new left tree
-                        {AddOperator {List.nth ParametersList 1} {List.drop NewestList 1} {NewTree getRight($)}} % thats the right of the left tree don't panic
-                    
+                        {AddOperator {List.nth NewestList 1} {List.drop NewestList 1} {NewTree getRight($)}} % thats the right of the left tree don't panic
+                    else
+
+                                            
+                        if {List.length NewestList} == 2 then
+
+                            %{Browse ['  IF YOU CAN READ THIS, THINGS HAVE GONE HORRIBLY WRONG, THE LIST IS' NewestList]}
+                            % IGNORE THE COMMENT ABOVE, IT'S A LIE, EVERYTHING IS FINE, WE CHILLING
+
+                            % WE'RE IN THE LAST STAGE OF THE TREE, IF WE'RE HERE IS BECAUSE SOME (HORRID) PARENTHESIS WAS USED
+                            % BUT WE'RE SMART ENOUGH TO HANDLE IT
+
+                            % PARAMETER LIST SHOULD BE SOMETHING OF THE FORM ['+' '1' 'x'] now.
+                            % we've done this before, just put the parameter to the right of the tree, and on the left
+                            % put a new tree with value '@' and the operator to the left of the new tree and the last remaining parameter to the right of the new tree
+
+                            % BUT BEFORE THAT PUT THE ACTUAL OPERATOR TO THE LEFT OF THE TREE, AND CREATE A NEW TREE WITH A @ TO THE RIGHT (THIS SOUND SCHIZOPHRENIC BUT TRUST ME ITS A HYPERSPECIFIC CASE)
+                            {Browse ['  · Almost done!']}
+                            {Browse ['  · Adding operator ' Operator 'to the left node as second to last operator of the tree']}
+
+                            % Add the operator to the left of the tree
+                            {TreeStruc setLeft({New TreeClass init(Operator)})}
+
+                            % create a new tree to the right with value '@'
+                            NewTree = {New TreeClass init('@')}
+                            {TreeStruc setRight(NewTree)}
+
+                            % TRUST THAT OUR ELSE CASE WILL HANDLE THE REST OF THE TREE :D
+                            {AddOperator {List.nth ParametersList 1} {List.drop ParametersList 1} NewTree}
+
+                            % % Create a new tree and set it to the left node
+                            % NewTree = {New TreeClass init('@')}
+                            % {TreeStruc setLeft(NewTree)}
+
+                            % % the leftmost operator is the new operator
+                            % {NewTree setLeft({New TreeClass init({List.nth NewestList 1})})}
+                            % % the rightmost operator is a new tree with the last remaining parameter
+                            % {NewTree setRight({New TreeClass init({FindNextParameter {Remove NewestList {Index NewestList {FindNextParameter NewestList}}}})})} % i hope you're proud of yourselfs
+
+                        else
+                            {Browse ['  · Adding ' {FindNextParameter ParametersList} 'to the right node as first parameter of the operator' Operator]}
+                            {Browse ['  · Creating a new tree to the left node for the operator' Operator]}
+                            {Browse ['  · We"ll now continue with operator' {List.nth ParametersList 1} 'over this new left tree']}
+
+                            % Add the first parameter to the right of the tree
+                            {TreeStruc setRight({New TreeClass init({FindNextParameter ParametersList})})}
+
+                            % Create a new tree and set it to the left node
+                            NewTree = {New TreeClass init('@')}
+
+                            % the leftmost operator is the new operator
+                            {NewTree setLeft({New TreeClass init(Operator)})}
+
+                            % the rightmost operator is a new tree with a value of '@'
+                            {NewTree setRight({New TreeClass init('@')})}
+
+                            {TreeStruc setLeft(NewTree)}
+
+                            % % Recursovely repeat the process over this new left tree
+                            {AddOperator {List.nth ParametersList 1} {List.drop NewestList 1} {NewTree getRight($)}} % thats the right of the left tree don't panic
+                        
+                        end
                     end
+
+
+                    
+                    % else 
+                    %     % OH LOOK ITS A NEW OPERATOR, ADD IT TO THE LEFT NODE, ADD A '@' TO THE RIGHT NODE AND CALL THE FUNCTION RECURSIVELY
+                    %     % CONTINUING THE TREE OVER THE NEW RIGHT NODE
+                    %     {Browse ['  · Adding operator' {List.nth ParametersList 1} 'to the left node as a operatora ahead of operator ' Operator]}
+                    %     {Browse ['  · Creating a new tree to the right node for the other parameter of operator' Operator]}
+                    %     % Create a new tree with the operator
+                    %     local NewTree in
+
+                    %         % Add the first parameter to the right of the tree
+                    %         {TreeStruc setLeft({New TreeClass init({List.nth ParametersList 1})})}
+
+                    %         % Create a new tree and set it to the left node
+                    %         NewTree = {New TreeClass init('@')}
+                    %         {TreeStruc setRight(NewTree)}
+
+                    %         % % Recursovely repeat the process over this new left tree
+                    %         {AddOperator Operator {List.drop ParametersList 1} NewTree}
+                    %     end
+                    % end
+
+                else
+                    {Browse ['  · Adding parameter ' {List.nth ParametersList 1} 'to the right node as a parameter of operator' Operator]}
+                    {Browse ['  · Creating a new tree to the left node for the other parameter of operator' Operator]}
+                    % Create a new tree with the operator
+                    local NewTree in
+
+                        % Add the first parameter to the right of the tree
+                        {TreeStruc setRight({New TreeClass init({List.nth ParametersList 1})})}
+
+                        % Create a new tree and set it to the left node
+                        NewTree = {New TreeClass init('@')}
+                        {TreeStruc setLeft(NewTree)}
+
+                        % % Recursovely repeat the process over this new left tree
+                        {AddOperator Operator {List.drop ParametersList 1} NewTree}
+                    end
+
                 end
-
-
-                
-                % else 
-                %     % OH LOOK ITS A NEW OPERATOR, ADD IT TO THE LEFT NODE, ADD A '@' TO THE RIGHT NODE AND CALL THE FUNCTION RECURSIVELY
-                %     % CONTINUING THE TREE OVER THE NEW RIGHT NODE
-                %     {Browse ['  · Adding operator' {List.nth ParametersList 1} 'to the left node as a operatora ahead of operator ' Operator]}
-                %     {Browse ['  · Creating a new tree to the right node for the other parameter of operator' Operator]}
-                %     % Create a new tree with the operator
-                %     local NewTree in
-
-                %         % Add the first parameter to the right of the tree
-                %         {TreeStruc setLeft({New TreeClass init({List.nth ParametersList 1})})}
-
-                %         % Create a new tree and set it to the left node
-                %         NewTree = {New TreeClass init('@')}
-                %         {TreeStruc setRight(NewTree)}
-
-                %         % % Recursovely repeat the process over this new left tree
-                %         {AddOperator Operator {List.drop ParametersList 1} NewTree}
-                %     end
-                % end
-
-            else
-                {Browse ['  · Adding parameter ' {List.nth ParametersList 1} 'to the right node as a parameter of operator' Operator]}
-                {Browse ['  · Creating a new tree to the left node for the other parameter of operator' Operator]}
-                % Create a new tree with the operator
-                local NewTree in
-
-                    % Add the first parameter to the right of the tree
-                    {TreeStruc setRight({New TreeClass init({List.nth ParametersList 1})})}
-
-                    % Create a new tree and set it to the left node
-                    NewTree = {New TreeClass init('@')}
-                    {TreeStruc setLeft(NewTree)}
-
-                    % % Recursovely repeat the process over this new left tree
-                    {AddOperator Operator {List.drop ParametersList 1} NewTree}
-                end
-
             end
         end
 
@@ -646,7 +676,16 @@ declare
                         end
                     end
                 else
-                    {FindNextParameterAux T HaveISeenAnOperator H}
+
+                    % unique case: the first element is a parameter, this happens if it hasnt seen an operator yet and the last thing is nil
+                    if HaveISeenAnOperator == 'no' then
+                        H
+                    else
+
+                        {FindNextParameterAux T HaveISeenAnOperator H}
+                    
+                    end
+                    
                 end
             else
                 LastThingISawThatShouldBeAParameter
@@ -655,6 +694,9 @@ declare
     in
         {FindNextParameterAux ListParam 'no' nil}
     end
+    
+    
+    
     
 
     % /////////////////////////////////////////////////////////////////////////////
@@ -1038,7 +1080,7 @@ declare
 
 % Test case
 local Code Call in
-    Code = 'fun cubeplusone x = x * x * x + 1' % SHOULD BE 28 (3*3*3+1), TRY x*x*(x+1) FOR 36 (PARENTHESIS DO WORK!! I LOVE PEMDAS)
+    Code = 'fun cubeplusone x = 1 + x * x * x' % SHOULD BE 28 (3*3*3+1), TRY x*x*(x+1) FOR 36 (PARENTHESIS DO WORK!! I LOVE PEMDAS)
     Call = 'cubeplusone 3'
     
     local TreeStruc Parser in
