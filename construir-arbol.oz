@@ -244,15 +244,12 @@ declare
                             % Get the primitive operator (two nodes to the left)
                             local Primitive Arg1 Arg2 in
                                 Primitive = {{RedexNode getLeft($)} getLeft($)}
-                                {Browse ['Primitive operator:' {Primitive getValue($)}]}
                                 
                                 % Get first argument (one node to the left and one to the right)
                                 Arg1 = {RedexNode getRight($)}
-                                {Browse ['Arg1 raw value:' {Arg1 getValue($)} 'type:' {Value.type {Arg1 getValue($)}}]}
                                 
                                 % Get second argument (one node to the right)
                                 Arg2 = {{RedexNode getLeft($)} getRight($)}
-                                {Browse ['Arg2 raw value:' {Arg2 getValue($)} 'type:' {Value.type {Arg2 getValue($)}}]}
                                 
                                 % Get the actual values (either direct or from parser)
                                 local Value1 Value2 Result in
@@ -280,9 +277,6 @@ declare
                                     {RedexNode setValue(Result)}
                                     {RedexNode setLeft(nil)}
                                     {RedexNode setRight(nil)}
-                                    
-                                    {Browse ['After evaluation:']}
-                                    {Browse ['- Updated tree structure:' {self treeStructure($)}]}
                                     
                                     % Continue evaluation
                                     {EvaluateStep}
@@ -506,8 +500,6 @@ declare
 
             % Create a new tree with the operator
             local NewTree NewestList in
-
-                {Browse ['PARAMETERS LIST' ParametersList 'OPERATOR' Operator]}
 
                 NewestList = {Remove ParametersList {Index ParametersList {FindNextParameter ParametersList}}}
                 if {List.member {List.nth NewestList 1} ['+' '-' '*' '/' '=' '(' ')']} then
@@ -1022,11 +1014,9 @@ declare
             
             % Get the parameter values (everything after the function name)
             ParamValues = {List.drop CallWords 1}
-            {Browse ['ParamValues:' ParamValues]}
             
             % Get the list of parameters from the parser
             local Params = {Parser getAllParameters($)} in
-                {Browse ['Parser Parameters:' Params]}
                 
                 % Debug the zip operation
                 local ZippedPairs in
@@ -1091,7 +1081,6 @@ declare
                     % Find first occurrence where function is followed by numeric parameters
                     local FindEvaluable in
                         fun {FindEvaluable Words Position}
-                            {Browse ['Checking position' Position 'Words:' Words]}
                             
                             if {Length Words} < ParamCount + 1 then
                                 % Not enough words left for a complete call
@@ -1101,13 +1090,11 @@ declare
                                 if {List.nth Words 1} == FunctionName then
                                     % Check if next ParamCount words are all numeric
                                     local Parameters = {List.take {List.drop Words 1} ParamCount} in
-                                        {Browse ['Found function, checking parameters:' Parameters]}
                                         
                                         if {List.all Parameters IsNumeric} then
                                             % Found a valid call
                                             StartPos = Position
                                             EndPos = Position + ParamCount
-                                            {Browse ['Found evaluable call from position' StartPos 'to' EndPos]}
     
                                             % Get the evaluable call
                                             local EvaluableCall in
@@ -1151,11 +1138,8 @@ declare
     fun {EvaluateExpressionFully Call Code}
         % Helper function to recursively evaluate expressions
         fun {EvaluateUntilDone Words}
-            {Browse ['Current expression:' Words]}
-            
             if {Length Words} == 1 then
                 % We've reached the final result
-                {Browse ['Final result:' Words]}
                 {List.nth Words 1}
             else
                 % Find and evaluate the next expression
