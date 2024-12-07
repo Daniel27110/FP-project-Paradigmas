@@ -65,7 +65,24 @@ Este proyecto fue desarrollado por:
    ```
    81
    ```
+2. **Llamados anidados de varias funciones**
+   Este caso permite evidenciar el caso mas complejo de funciones anidadas, donde cada parametro de una funcion es una funcion.
+   **Definición:** `fun add x y z = x + y + z'
+   **Llamada:** `add add 1 1 1 add 1 1 1 add 1 1 1'
+   **Resultado esperado:**  
+   ```
+   9
+   ```
 
+
+3. **Llamados anidados de varias funciones**
+   Este caso permite evidenciar el caso mas complejo de funciones anidadas, donde cada parametro de una funcion es una funcion.
+   **Definición:** `fun sum_n x y z n = (x + y + z) * n)'
+   **Llamada:** `sum_n 1 sum_n 1 1 1 2 3 2'
+   **Resultado esperado:**  
+   ```
+   9
+   ```
 
 ## Nota
 
@@ -75,12 +92,6 @@ De acuerdo con lo discutido en clase con el profesor Nicolás Cardozo, **no se i
 fun var_use x = var y = x + x in var z = y * 2 in z - 3
 ```
 
-Además, tal como fue acordado en clase, no se incluye el uso de métodos como parámetros. Por ejemplo, la siguiente llamada no es válida:  
+Adicionalmente, si se desae ver la salida completa en mozart, es recomendable aumentar el buffer de salida de la consola de Mozart, ya que la salida de los programas puede ser muy extensa. Para hacer esto, se debe ir a `View -> Console -> Console Buffer Size` y aumentar el tamaño del buffer.
 
-```plaintext
-sum_n 1 2 3 sum_n 1 2 3 4
-```
-
-(Usando la definición de `sum_n` del caso de prueba).  
-
-Sin embargo, **sí se incluye el soporte para el uso anidado de llamados**, como se evidencia en los casos de prueba complejos descritos anteriormente. Esto permite validar la correcta evaluación de expresiones compuestas y demuestra la flexibilidad del sistema de reducción implementado.
+Adicionalmente, se espera que haya un espacio entre cada token en el código fuente. 
