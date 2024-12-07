@@ -521,8 +521,8 @@ declare
                         % OK CALM DOWN, WE CAN HANDLE THIS
 
                         {Browse ['  · Adding ' {List.nth ParametersList 1} 'to the right node as first parameter of the operator' Operator]}
-                        {Browse ['  · Creating a new tree to the left node for the operator' Operator]}
-                        {Browse ['  · We"ll now continue with operator' {List.nth NewestList 1} 'over this new left tree']}
+                        %{Browse ['  · Creating a new tree to the left node for the operator' Operator]}
+                        %{Browse ['  · We"ll now continue with operator' {List.nth NewestList 1} 'over this new left tree']}
 
                         % Add the first parameter to the right of the tree
                         {TreeStruc setRight({New TreeClass init({List.nth ParametersList 1})})}
@@ -1162,7 +1162,7 @@ declare
 
 % Test the recursive evaluation
 local Code Call Result in
-    Code = 'fun sum_n x y z n = (x + y + z) * n'
+    Code = 'fun sum_n x y z n = (x + y + z) * n)'
     Call = 'sum_n 1 sum_n 1 1 1 2 3 2'
     
     Result = {EvaluateExpressionFully Call Code}
