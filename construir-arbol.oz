@@ -233,7 +233,7 @@ declare
         end
 
         % Evaluate the tree
-        meth evaluate(Parser)
+               meth evaluate(Parser)
             local EvaluateStep in
                 proc {EvaluateStep}
                     local RedexNode in
@@ -513,68 +513,29 @@ declare
                 % Create a new tree with the operator
                 local NewTree NewestList in
 
-                    NewestList = {Remove ParametersList {Index ParametersList {FindNextParameter ParametersList}}}
+                    NewestList = {Remove ParametersList {List.length ParametersList}}
                     % {Browse ['  · New list' NewestList]}
-                    
-                    
-                    if {List.length NewestList} == 2 then
 
-                        %{Browse ['  IF YOU CAN READ THIS, THINGS HAVE GONE HORRIBLY WRONG, THE LIST IS' NewestList]}
-                        % IGNORE THE COMMENT ABOVE, IT'S A LIE, EVERYTHING IS FINE, WE CHILLING
+                    {Browse ['  · Adding ' {List.last ParametersList} 'to the right node as first parameter of the operator' Operator]}
+                    {Browse ['  · Creating a new tree to the left node for the operator' Operator]}
+                    {Browse ['  · We"ll now continue with operator' {List.nth ParametersList 1} ' over this new right node']}
 
-                        % WE'RE IN THE LAST STAGE OF THE TREE, IF WE'RE HERE IS BECAUSE SOME (HORRID) PARENTHESIS WAS USED
-                        % BUT WE'RE SMART ENOUGH TO HANDLE IT
+                    % Add the first parameter to the right of the tree
+                    {TreeStruc setRight({New TreeClass init({List.last ParametersList})})}
 
-                        % PARAMETER LIST SHOULD BE SOMETHING OF THE FORM ['+' '1' 'x'] now.
-                        % we've done this before, just put the parameter to the right of the tree, and on the left
-                        % put a new tree with value '@' and the operator to the left of the new tree and the last remaining parameter to the right of the new tree
+                    % Create a new tree and set it to the left node
+                    NewTree = {New TreeClass init('@')}
 
-                        % BUT BEFORE THAT PUT THE ACTUAL OPERATOR TO THE LEFT OF THE TREE, AND CREATE A NEW TREE WITH A @ TO THE RIGHT (THIS SOUND SCHIZOPHRENIC BUT TRUST ME ITS A HYPERSPECIFIC CASE)
-                        {Browse ['  · Almost done!']}
-                        {Browse ['  · Adding operator ' Operator 'to the left node as second to last operator of the tree']}
+                    % the leftmost operator is the new operator
+                    {NewTree setLeft({New TreeClass init(Operator)})}
 
-                        % Add the operator to the left of the tree
-                        {TreeStruc setLeft({New TreeClass init(Operator)})}
+                    % the rightmost operator is a new tree with a value of '@'
+                    {NewTree setRight({New TreeClass init('@')})}
 
-                        % create a new tree to the right with value '@'
-                        NewTree = {New TreeClass init('@')}
-                        {TreeStruc setRight(NewTree)}
+                    {TreeStruc setLeft(NewTree)}
 
-                        % TRUST THAT OUR ELSE CASE WILL HANDLE THE REST OF THE TREE :D
-                        {AddOperator {List.nth ParametersList 1} {List.drop ParametersList 1} NewTree}
-
-                        % % Create a new tree and set it to the left node
-                        % NewTree = {New TreeClass init('@')}
-                        % {TreeStruc setLeft(NewTree)}
-
-                        % % the leftmost operator is the new operator
-                        % {NewTree setLeft({New TreeClass init({List.nth NewestList 1})})}
-                        % % the rightmost operator is a new tree with the last remaining parameter
-                        % {NewTree setRight({New TreeClass init({FindNextParameter {Remove NewestList {Index NewestList {FindNextParameter NewestList}}}})})} % i hope you're proud of yourselfs
-
-                    else
-                        {Browse ['  · Adding ' {FindNextParameter ParametersList} 'to the right node as first parameter of the operator' Operator]}
-                        {Browse ['  · Creating a new tree to the left node for the operator' Operator]}
-                        {Browse ['  · We"ll now continue with operator' {List.nth ParametersList 1} 'over this new left tree']}
-
-                        % Add the first parameter to the right of the tree
-                        {TreeStruc setRight({New TreeClass init({FindNextParameter ParametersList})})}
-
-                        % Create a new tree and set it to the left node
-                        NewTree = {New TreeClass init('@')}
-
-                        % the leftmost operator is the new operator
-                        {NewTree setLeft({New TreeClass init(Operator)})}
-
-                        % the rightmost operator is a new tree with a value of '@'
-                        {NewTree setRight({New TreeClass init('@')})}
-
-                        {TreeStruc setLeft(NewTree)}
-
-                        % % Recursovely repeat the process over this new left tree
-                        {AddOperator {List.nth ParametersList 1} {List.drop NewestList 1} {NewTree getRight($)}} % thats the right of the left tree don't panic
-                    
-                    end
+                    % % Recursovely repeat the process over this new left tree
+                    {AddOperator {List.nth ParametersList 1} {List.drop NewestList 1} {NewTree getRight($)}}
                 end
 
 
@@ -621,41 +582,6 @@ declare
 
 
     end
-
-
-    % /////////////////////////////////////////////////////////////////////////////
-    % DEFINITION OF THE FUNCTION FindNextParameter - This is the last element in the list
-    % From left to right that is not an operator, and is not one of the first operators
-    % in the list
-    % for example, in ['*', '*', 'x', 'y', '+', 'x', '1'], the function would return 'y'
-    % /////////////////////////////////////////////////////////////////////////////
-
-    fun {FindNextParameter ListParam}
-        fun {FindNextParameterAux ListParam HaveISeenAnOperator LastThingISawThatShouldBeAParameter}
-            case ListParam of H|T then
-                % {Browse ['  FindNextParameterAux' ListParam HaveISeenAnOperator LastThingISawThatShouldBeAParameter 'H' H]}
-                if {List.member H ['+' '-' '*' '/' '=' '(' ')']} then
-                    % {Browse 'uwu'}
-                    if HaveISeenAnOperator == 'no' then
-                        {FindNextParameterAux T 'yes' nil}
-                    else
-                        if LastThingISawThatShouldBeAParameter == nil then
-                            {FindNextParameterAux T 'yes' nil}
-                        else
-                            LastThingISawThatShouldBeAParameter
-                        end
-                    end
-                else
-                    {FindNextParameterAux T HaveISeenAnOperator H}
-                end
-            else
-                LastThingISawThatShouldBeAParameter
-            end
-        end
-    in
-        {FindNextParameterAux ListParam 'no' nil}
-    end
-    
 
     % /////////////////////////////////////////////////////////////////////////////
     % DEFINITION OF THE FUNCTION TO RECURSIVELY GET THE POSITION OF A CHARACTER IN A LIST
@@ -983,46 +909,63 @@ declare
             {Browse ['ParamValues:' ParamValues]}
             
             % Get the list of parameters from the parser
-            local Params = {Parser getAllParameters($)} in
+            local Params in
+                Params = {Parser getAllParameters($)}
                 {Browse ['Parser Parameters:' Params]}
                 
-                % Debug the zip operation
-                local ZippedPairs in
-                    ZippedPairs = {List.zip Params ParamValues fun {$ X Y} X#Y end}
-
-                    % Iterate through parameters and assign values
-                    try
-                        {List.forAll ZippedPairs
-                         proc {$ Pair}
-                            local Param Value in
-                                Param#Value = Pair
-                                % Convert string to integer if possible
-                                local ConvertedValue in
-                                    ConvertedValue = try 
-                                        {String.toInt Value}
-                                    catch _ then
-                                        % If not a number, keep it as an atom
-                                        Value
-                                    end
+                % Ensure the number of parameters matches the number of arguments
+                if {List.length Params} \= {List.length ParamValues} then
+                    {Browse 'Error: Number of parameters does not match number of arguments'}
+                else
+                    % Debug the zip operation
+                    local ZippedPairs in
+                        ZippedPairs = {List.zip Params ParamValues fun {$ X Y} X#Y end}
+    
+                        % Iterate through parameters and assign values
+                        try
+                            {List.forAll ZippedPairs
+                             proc {$ Pair}
+                                local Param Value in
+                                    Param#Value = Pair
                                     
-                                    % Update parameter value in parser
-                                    {Parser updateParameterValue(Param ConvertedValue)}
+                                    % Check if the value is a function call
+                                    if {List.member {String.toAtom {List.head {Split Value}}} {Parser getAllParameters($)}} then
+                                        % Evaluate the nested function call
+                                        local NestedResult in
+                                            {EvaluateCall Parser Value}
+                                            NestedResult = {Parser getParameterValue({List.head {Split Value}} $)}
+                                            {Parser updateParameterValue(Param NestedResult)}
+                                        end
+                                    else
+                                        % Convert string to integer if possible
+                                        local ConvertedValue in
+                                            try 
+                                                ConvertedValue = {String.toInt Value}
+                                            catch _ then
+                                                % If not a number, keep it as an atom
+                                                ConvertedValue = Value
+                                            end
+                                            
+                                            % Update parameter value in parser
+                                            {Parser updateParameterValue(Param ConvertedValue)}
+                                        end
+                                    end
                                 end
-                            end
-                         end}
-                    catch Ex then
-                        {Browse ['Error in parameter update loop:' Ex]}
+                             end}
+                        catch Ex then
+                            {Browse ['Error in parameter update loop:' Ex]}
+                        end
                     end
                 end
             end
         end
     end
-
+    
 
 % Test case
 local Code Call in
-    Code = 'fun cubeplusone x = x * x * x + 1' % SHOULD BE 28 (3*3*3+1), TRY x*x*(x+1) FOR 36 (PARENTHESIS DO WORK!! I LOVE PEMDAS)
-    Call = 'cubeplusone 3'
+    Code = 'fun cubeplusone x = (x * x * x) + 1'  % More complex expression
+    Call = 'cubeplusone 2'
     
     local TreeStruc Parser in
         % Get the constructed tree from ParseCode
