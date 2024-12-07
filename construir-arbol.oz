@@ -1120,7 +1120,7 @@ declare
                                                 local 
                                                     Result = {TreeStruc getValue($)}
                                                     BeforeCall = {List.take OriginalWords (StartPos-1)}
-                                                    AfterCall = {List.drop OriginalWords (EndPos+1)}
+                                                    AfterCall = {List.drop OriginalWords (EndPos)}
                                                     ResultStr = {String.toAtom {Int.toString Result}}
                                                     NewWords = {List.append BeforeCall {List.append [ResultStr] AfterCall}}
                                                 in
