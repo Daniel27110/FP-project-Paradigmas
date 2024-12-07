@@ -247,11 +247,11 @@ declare
                                 {Browse ['Primitive operator:' {Primitive getValue($)}]}
                                 
                                 % Get first argument (one node to the left and one to the right)
-                                Arg1 = {{RedexNode getLeft($)} getRight($)}
+                                Arg1 = {RedexNode getRight($)}
                                 {Browse ['Arg1 raw value:' {Arg1 getValue($)} 'type:' {Value.type {Arg1 getValue($)}}]}
                                 
                                 % Get second argument (one node to the right)
-                                Arg2 = {RedexNode getRight($)}
+                                Arg2 = {{RedexNode getLeft($)} getRight($)}
                                 {Browse ['Arg2 raw value:' {Arg2 getValue($)} 'type:' {Value.type {Arg2 getValue($)}}]}
                                 
                                 % Get the actual values (either direct or from parser)
@@ -1021,8 +1021,8 @@ declare
 
 % Test case
 local Code Call in
-    Code = 'fun cubeplusone x = x * x * x + 1' % SHOULD BE 28 (3*3*3+1), TRY x*x*(x+1) FOR 36 (PARENTHESIS DO WORK!! I LOVE PEMDAS)
-    Call = 'cubeplusone 3'
+    Code = 'fun div x y = x / y' 
+    Call = 'div 4 2'
     
     local TreeStruc Parser in
         % Get the constructed tree from ParseCode
