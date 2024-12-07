@@ -271,7 +271,7 @@ declare
                                     % Perform the operation
                                     Result = case {Primitive getValue($)}
                                     of '+' then Value1 + Value2
-                                    [] '-' then Value1 - Value2
+                                    [] '-' then Value2 - Value1
                                     [] '*' then Value1 * Value2
                                     [] '/' then Value1 div Value2
                                     end
@@ -1180,7 +1180,7 @@ declare
 
 % Test the recursive evaluation
 local Code Call Result in
-    Code = 'fun add x y z = x + y + z'
+    Code = 'fun add x y z = (x + y - z) * z'
     Call = 'add add 1 1 1 add 1 1 1 add 1 1 1'
     
     Result = {EvaluateExpressionFully Call Code}
