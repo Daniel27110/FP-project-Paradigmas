@@ -1006,8 +1006,7 @@ declare
         {String.toAtom {List.append {AtomToString Atom1} {AtomToString Atom2}}}
     end
 
-    proc {EvaluateCall Parser CallWords}
-        
+    proc {EvaluateCall Parser CallWords TreeTemplate}
         % Split the call into words
         local ParamValues in
             {Browse ['CallWords:' CallWords]}
@@ -1017,27 +1016,21 @@ declare
             
             % Get the list of parameters from the parser
             local Params = {Parser getAllParameters($)} in
-                
-                % Debug the zip operation
                 local ZippedPairs in
                     ZippedPairs = {List.zip Params ParamValues fun {$ X Y} X#Y end}
-
+    
                     % Iterate through parameters and assign values
                     try
                         {List.forAll ZippedPairs
                          proc {$ Pair}
                             local Param Value in
                                 Param#Value = Pair
-                                % Convert string to integer if possible
                                 local ConvertedValue in
                                     ConvertedValue = try 
                                         {String.toInt Value}
                                     catch _ then
-                                        % If not a number, keep it as an atom
                                         Value
                                     end
-                                    
-                                    % Update parameter value in parser
                                     {Parser updateParameterValue(Param ConvertedValue)}
                                 end
                             end
@@ -1049,123 +1042,128 @@ declare
             end
         end
     end
-
-    fun {FindFirstEvaluableCall Call Code}
-        % Parse the original function definition first
-        local TreeStruc Parser in
-            % Parse and store the function
-            {ParseCode {Split Code} TreeStruc Parser}
+    
+    fun {CopyTree Tree}
+        if Tree == nil then nil
+        else
+            local NewTree in
+                NewTree = {New TreeClass init({Tree getValue($)})}
+                {NewTree setLeft({CopyTree {Tree getLeft($)}})}
+                {NewTree setRight({CopyTree {Tree getRight($)}})}
+                NewTree
+            end
+        end
+    end
+    
+    fun {FindFirstEvaluableCall Call Code TreeTemplate Parser}
+        local 
+            StartPos EndPos 
+            FunctionName ParamCount OriginalWords 
+        in 
+            % Get function info from parser
+            FunctionName = {Parser getFunctionName($)}
+            ParamCount = {Length {Parser getAllParameters($)}}
             
-            local 
-                StartPos EndPos 
-                FunctionName ParamCount OriginalWords 
-            in 
-                % Get function info from parser
-                FunctionName = {Parser getFunctionName($)}
-                ParamCount = {Length {Parser getAllParameters($)}}
+            % Split the call into words and keep original
+            OriginalWords = {Split Call}
+            
+            % Helper to check if a string is numeric
+            local IsNumeric in
+                fun {IsNumeric Str}
+                    try
+                        _ = {String.toInt {AtomToString Str}}
+                        true
+                    catch _ then
+                        false
+                    end
+                end
                 
-                % Split the call into words and keep original
-                OriginalWords = {Split Call}
-                
-                % Helper to check if a string is numeric
-                local IsNumeric in
-                    fun {IsNumeric Str}
-                        try
-                            _ = {String.toInt {AtomToString Str}}
-                            true
-                        catch _ then
-                            false
+                % Find first occurrence where function is followed by numeric parameters
+                local FindEvaluable in
+                    fun {FindEvaluable Words Position}
+                        if {Length Words} < ParamCount + 1 then
+                            nil
+                        else
+                            % Check if current word is the function name
+                            if {List.nth Words 1} == FunctionName then
+                                % Check if next ParamCount words are all numeric
+                                local Parameters = {List.take {List.drop Words 1} ParamCount} in
+                                    if {List.all Parameters IsNumeric} then
+                                        % Found a valid call
+                                        StartPos = Position
+                                        EndPos = Position + ParamCount
+    
+                                        % Get the evaluable call
+                                        local EvaluableCall TreeCopy in
+                                            EvaluableCall = {List.take Words (ParamCount + 1)}
+                                            % Create a copy of the tree for this evaluation
+                                            TreeCopy = {CopyTree TreeTemplate}
+                                            % Evaluate the call
+                                            {EvaluateCall Parser EvaluableCall TreeCopy}
+                                            {TreeCopy evaluate(Parser)}
+                                            
+                                            % Get result and create new word list
+                                            local 
+                                                Result = {TreeCopy getValue($)}
+                                                BeforeCall = {List.take OriginalWords (StartPos-1)}
+                                                AfterCall = {List.drop OriginalWords (EndPos)}
+                                                ResultStr = {String.toAtom {Int.toString Result}}
+                                                NewWords = {List.append BeforeCall {List.append [ResultStr] AfterCall}}
+                                            in
+                                                Position#EvaluableCall#Result#NewWords
+                                            end
+                                        end
+                                    else
+                                        {FindEvaluable {List.drop Words 1} Position+1}
+                                    end
+                                end
+                            else
+                                {FindEvaluable {List.drop Words 1} Position+1}
+                            end
                         end
                     end
                     
-                    % Find first occurrence where function is followed by numeric parameters
-                    local FindEvaluable in
-                        fun {FindEvaluable Words Position}
-                            
-                            if {Length Words} < ParamCount + 1 then
-                                % Not enough words left for a complete call
-                                nil
-                            else
-                                % Check if current word is the function name
-                                if {List.nth Words 1} == FunctionName then
-                                    % Check if next ParamCount words are all numeric
-                                    local Parameters = {List.take {List.drop Words 1} ParamCount} in
-                                        
-                                        if {List.all Parameters IsNumeric} then
-                                            % Found a valid call
-                                            StartPos = Position
-                                            EndPos = Position + ParamCount
-    
-                                            % Get the evaluable call
-                                            local EvaluableCall in
-                                                EvaluableCall = {List.take Words (ParamCount + 1)}
-                                                % Evaluate the call
-                                                {EvaluateCall Parser EvaluableCall}
-                                                {TreeStruc evaluate(Parser)}
-                                                
-                                                % Get result and create new word list using original words
-                                                local 
-                                                    Result = {TreeStruc getValue($)}
-                                                    BeforeCall = {List.take OriginalWords (StartPos-1)}
-                                                    AfterCall = {List.drop OriginalWords (EndPos)}
-                                                    ResultStr = {String.toAtom {Int.toString Result}}
-                                                    NewWords = {List.append BeforeCall {List.append [ResultStr] AfterCall}}
-                                                in
-                                                    % Return position, call, result, and new word list
-                                                    Position#EvaluableCall#Result#NewWords
-                                                end
-                                            end
-                                        else
-                                            % Parameters not all numeric, continue search
-                                            {FindEvaluable {List.drop Words 1} Position+1}
-                                        end
-                                    end
-                                else
-                                    % Not the function name, continue search
-                                    {FindEvaluable {List.drop Words 1} Position+1}
-                                end
-                            end
-                        end
-                        
-                        % Start the search and evaluation process
-                        {FindEvaluable OriginalWords 1}
-                    end
+                    {FindEvaluable OriginalWords 1}
                 end
             end
         end
     end
-
+    
     fun {EvaluateExpressionFully Call Code}
-        % Helper function to recursively evaluate expressions
-        fun {EvaluateUntilDone Words}
-            if {Length Words} == 1 then
-                % We've reached the final result
-                {List.nth Words 1}
-            else
-                % Find and evaluate the next expression
-                local Found = {FindFirstEvaluableCall {List.foldL Words fun {$ Acc X} {Concatenate Acc {Concatenate ' ' X}} end ''} Code} in
-                    case Found
-                    of Position#EvaluableCall#Result#NewWords then
-                        {Browse ['Evaluated:' EvaluableCall '->' Result]}
-                        {Browse ['New expression:' NewWords]}
-                        % Recursively evaluate the new expression
-                        {EvaluateUntilDone NewWords}
-                    else
-                        {Browse 'Error: Unable to evaluate further'}
-                        nil
+        % Parse the original function definition first and create template tree
+        local TreeTemplate Parser EvaluateUntilDone in
+            % Parse and store the function - this happens only once
+            {ParseCode {Split Code} TreeTemplate Parser}
+            
+            % Helper function to recursively evaluate expressions
+            fun {EvaluateUntilDone Words}
+                if {Length Words} == 1 then
+                    {List.nth Words 1}
+                else
+                    % Find and evaluate the next expression using the template tree
+                    local Found = {FindFirstEvaluableCall {List.foldL Words fun {$ Acc X} {Concatenate Acc {Concatenate ' ' X}} end ''} Code TreeTemplate Parser} in
+                        case Found
+                        of Position#EvaluableCall#Result#NewWords then
+                            {Browse ['Evaluated:' EvaluableCall '->' Result]}
+                            {Browse ['New expression:' NewWords]}
+                            {EvaluateUntilDone NewWords}
+                        else
+                            {Browse 'Error: Unable to evaluate further'}
+                            nil
+                        end
                     end
                 end
             end
+            
+            % Start the evaluation process with the initial call split into words
+            {EvaluateUntilDone {Split Call}}
         end
-    in
-        % Start the evaluation process with the initial call split into words
-        {EvaluateUntilDone {Split Call}}
     end
 
 % Test the recursive evaluation
 local Code Call Result in
-    Code = 'fun add x y z = (x + y - z) * z'
-    Call = 'add add 1 1 1 add 1 1 1 add 1 1 1'
+    Code = 'fun sum_n x y z n = (x + y + z) * n'
+    Call = 'sum_n 1 sum_n 1 1 1 2 3 2'
     
     Result = {EvaluateExpressionFully Call Code}
     {Browse ['Final evaluation result:' Result]}
