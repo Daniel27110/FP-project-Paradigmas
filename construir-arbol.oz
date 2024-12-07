@@ -1060,42 +1060,6 @@ declare
         end
     end
 
-    fun {EvaluateAllCalls Call Code}
-        local IsSingleNumber in
-            fun {IsSingleNumber Words}
-                {Length Words} == 1 andthen 
-                try 
-                    _ = {String.toInt {AtomToString {List.nth Words 1}}}
-                    true
-                catch _ then 
-                    false
-                end
-            end
-        
-            % Convert initial call to word list if it's a string
-            local InitialWords = if {Value.type Call} == atom then {Split Call} else Call end in
-                % Base case: if we have a single number, we're done
-                if {IsSingleNumber InitialWords} then
-                    InitialWords
-                else
-                    % Find and evaluate the first evaluable call
-                    local Found = {FindFirstEvaluableCall {List.foldL InitialWords fun {$ Acc X} {Concatenate Acc X} end ''} Code} in
-                        case Found
-                        of Position#EvaluableCall#Result#NewWords then
-                            {Browse ['Evaluated:' EvaluableCall '->' Result]}
-                            {Browse ['New expression:' NewWords]}
-                            % Recursively evaluate the new expression, passing the word list directly
-                            {EvaluateAllCalls NewWords Code}
-                        else
-                            {Browse 'No more evaluable calls found'}
-                            InitialWords
-                        end
-                    end
-                end
-            end
-        end
-    end
-
     fun {FindFirstEvaluableCall Call Code}
         % Parse the original function definition first
         local TreeStruc Parser in
@@ -1184,13 +1148,41 @@ declare
         end
     end
 
-% Assuming EvaluateCall is already defined and assigns values to the parser
-
-local Code Call in
-    Code = 'fun add x y = x + y'
-    Call = 'add 1 add 2 add 3 3'
-    
-    local Result = {EvaluateAllCalls Call Code} in
-        {Browse ['Final result:' Result]}
+    fun {EvaluateExpressionFully Call Code}
+        % Helper function to recursively evaluate expressions
+        fun {EvaluateUntilDone Words}
+            {Browse ['Current expression:' Words]}
+            
+            if {Length Words} == 1 then
+                % We've reached the final result
+                {Browse ['Final result:' Words]}
+                {List.nth Words 1}
+            else
+                % Find and evaluate the next expression
+                local Found = {FindFirstEvaluableCall {List.foldL Words fun {$ Acc X} {Concatenate Acc {Concatenate ' ' X}} end ''} Code} in
+                    case Found
+                    of Position#EvaluableCall#Result#NewWords then
+                        {Browse ['Evaluated:' EvaluableCall '->' Result]}
+                        {Browse ['New expression:' NewWords]}
+                        % Recursively evaluate the new expression
+                        {EvaluateUntilDone NewWords}
+                    else
+                        {Browse 'Error: Unable to evaluate further'}
+                        nil
+                    end
+                end
+            end
+        end
+    in
+        % Start the evaluation process with the initial call split into words
+        {EvaluateUntilDone {Split Call}}
     end
+
+% Test the recursive evaluation
+local Code Call Result in
+    Code = 'fun add x y z = x + y + z'
+    Call = 'add add 1 1 1 add 1 1 1 add 1 1 1'
+    
+    Result = {EvaluateExpressionFully Call Code}
+    {Browse ['Final evaluation result:' Result]}
 end
