@@ -23,33 +23,45 @@ Este proyecto fue desarrollado por:
 
 ### Casos Simples
 
-1. **Construcción y reducción básica del árbol de expresiones**  
-   **Definición:** `fun square x = x * x`  
-   **Llamada:** `square 3`  
+1. **Construcción y reducción básica del árbol de expresiones**
+   
+   **Definición:** `fun square x = x * x`
+   
+   **Llamada:** `square 3`
+   
    **Resultado esperado:**  
    ```
    9
    ```
 
-2. **Soporte para múltiples parámetros**  
-   **Definición:** `fun sum_n x y z n = (x + y + z) * n`  
-   **Llamada:** `sum_n 2 2 2 10`  
+3. **Soporte para múltiples parámetros**
+   
+   **Definición:** `fun sum_n x y z n = (x + y + z) * n`
+   
+   **Llamada:** `sum_n 2 2 2 10`
+    
    **Resultado esperado:**  
    ```
    60
    ```
 
-3. **Uso de varios operadores y orden de operaciones (PEMDAS)**  
-   **Definición:** `fun cubeplusone x = x * x * x + 1`  
-   **Llamada:** `cubeplusone 3`  
+4. **Uso de varios operadores y orden de operaciones (PEMDAS)**
+   
+   **Definición:** `fun cubeplusone x = x * x * x + 1`
+   
+   **Llamada:** `cubeplusone 3`
+     
    **Resultado esperado:**  
    ```
    28
    ```
 
-4. **Manejo correcto de paréntesis y orden de operaciones (PEMDAS)**  
-   **Definición:** `fun plusonethencube x = x * x * (x + 1)`  
-   **Llamada:** `plusonethencube 3`  
+5. **Manejo correcto de paréntesis y orden de operaciones (PEMDAS)**
+    
+   **Definición:** `fun plusonethencube x = x * x * (x + 1)`
+   
+   **Llamada:** `plusonethencube 3`
+   
    **Resultado esperado:**  
    ```
    36
@@ -58,27 +70,36 @@ Este proyecto fue desarrollado por:
 ### Casos Complejos
 
 1. **Llamados anidados de funciones**  
-   Este caso permite evidenciar el correcto funcionamiento de llamadas anidadas de funciones.  
-   **Definición:** `fun square x = x * x`  
-   **Llamada:** `square square 3`  
+   Este caso permite evidenciar el correcto funcionamiento de llamadas anidadas de funciones.
+   
+   **Definición:** `fun square x = x * x`
+    
+   **Llamada:** `square square 3`
+   
    **Resultado esperado:**  
    ```
    81
    ```
-2. **Llamados anidados de varias funciones**
+3. **Llamados anidados de varias funciones**
    Este caso permite evidenciar el caso mas complejo de funciones anidadas, donde cada parametro de una funcion es una funcion.
-   **Definición:** `fun add x y z = x + y + z'
-   **Llamada:** `add add 1 1 1 add 1 1 1 add 1 1 1'
+   
+   **Definición:** `fun add x y z = x + y + z`
+   
+   **Llamada:** `add add 1 1 1 add 1 1 1 add 1 1 1`
+
    **Resultado esperado:**  
    ```
    9
    ```
 
 
-3. **Llamados anidados de varias funciones**
+5. **Llamados anidados de varias funciones**
    Este caso permite evidenciar el caso mas complejo de funciones anidadas, donde cada parametro de una funcion es una funcion.
-   **Definición:** `fun sum_n x y z n = (x + y + z) * n)'
-   **Llamada:** `sum_n 1 sum_n 1 1 1 2 3 2'
+
+   **Definición:** `fun sum_n x y z n = (x + y + z) * n)`
+
+   **Llamada:** `sum_n 1 sum_n 1 1 1 2 3 2`
+   
    **Resultado esperado:**  
    ```
    9
